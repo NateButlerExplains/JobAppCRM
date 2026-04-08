@@ -55,6 +55,7 @@ def add_security_headers(response):
     return response
 
 # Initialize database
+logger.info(f"Initializing database at: {Config.DATABASE_PATH}")
 db = Database(Config.DATABASE_PATH)
 
 # Initialize scheduler
@@ -483,6 +484,106 @@ def link_email(email_id):
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error linking email: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/emails/process-unlinked", methods=["POST"])
+def process_unlinked_emails():
+    """Process unlinked emails with Gemini classification and auto-linking."""
+    try:
+        data = request.json or {}
+        limit = data.get("limit", None)
+
+        # Validate limit if provided
+        if limit is not None:
+            if not isinstance(limit, int) or limit <= 0:
+                raise ValueError("limit must be a positive integer")
+
+        # Get unlinked emails
+        unlinked = Email.get_unlinked(db)
+        if limit:
+            emails_to_process = unlinked[:limit]
+        else:
+            emails_to_process = unlinked
+
+        if not emails_to_process:
+            return jsonify({
+                "message": "No unlinked emails to process",
+                "processed": 0,
+                "linked": 0,
+                "non_job_related": 0,
+            }), 200
+
+        # Process each email
+        processor = EmailProcessor(db)
+        stats = {
+            "processed": 0,
+            "linked": 0,
+            "non_job_related": 0,
+            "errors": [],
+        }
+
+        for email in emails_to_process:
+            try:
+                email_id = email["id"]
+                subject = email["subject"] or ""
+                body_excerpt = email["body_excerpt"] or ""
+                sender = email["sender"] or ""
+
+                # Classify email
+                classification = processor.classifier.classify_email(
+                    subject,
+                    body_excerpt,
+                    sender
+                )
+
+                # Skip non-job-related emails
+                if not classification.get("is_job_related", False):
+                    # Mark email as non-job-related (set to a special status or skip)
+                    logger.info(f"Email {email_id} classified as non-job-related")
+                    stats["non_job_related"] += 1
+                    stats["processed"] += 1
+                    continue
+
+                # Try to link job-related emails
+                confidence = classification.get("confidence", 0.0)
+                if confidence >= 0.7:  # Minimum confidence threshold
+                    # Get all applications to attempt linking
+                    applications = Application.get_all(db)
+                    best_match = None
+                    best_score = 0.7  # Require confidence >= 0.7
+
+                    # Use application linker to find best match
+                    for app in applications:
+                        # Calculate semantic match score
+                        score = processor.linker.semantic_match_email_to_application(
+                            subject, body_excerpt, app["company_name"], app["job_title"]
+                        )
+
+                        if score > best_score:
+                            best_score = score
+                            best_match = app
+
+                    # If we found a good match, link it
+                    if best_match:
+                        Email.link_to_application(db, email_id, best_match["id"])
+                        stats["linked"] += 1
+                        logger.info(f"Linked email {email_id} to app {best_match['id']} (score: {best_score:.2f})")
+
+                stats["processed"] += 1
+            except Exception as e:
+                logger.error(f"Error processing email {email_id}: {e}")
+                stats["errors"].append(str(e))
+
+        return jsonify({
+            "message": f"Processed {stats['processed']} emails",
+            **stats
+        }), 200
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error processing unlinked emails: {e}")
         return jsonify({"error": str(e)}), 500
 
 

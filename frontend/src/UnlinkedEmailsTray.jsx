@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { linkEmail } from './api'
+import { linkEmail, processUnlinkedEmails } from './api'
 
-export function UnlinkedEmailsTray({ emails = [], applications = [], onEmailLinked, onError }) {
+export function UnlinkedEmailsTray({ emails = [], applications = [], onEmailLinked, onError, onProcessed }) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(null) // email id that's loading
   const [searchQuery, setSearchQuery] = useState({})
   const [error, setError] = useState(null)
+  const [processing, setProcessing] = useState(false)
+  const [processResult, setProcessResult] = useState(null)
 
   // Filter and search
   const filteredAppsForEmail = (emailId) => {
@@ -40,6 +42,32 @@ export function UnlinkedEmailsTray({ emails = [], applications = [], onEmailLink
     }
   }
 
+  const handleProcessUnlinked = async (limit = null) => {
+    setProcessing(true)
+    setError(null)
+    setProcessResult(null)
+
+    try {
+      const response = await processUnlinkedEmails(limit)
+      const result = response.data
+      setProcessResult(result)
+
+      // Notify parent to refresh
+      if (onProcessed) {
+        onProcessed(result)
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to process unlinked emails'
+      setError(errorMsg)
+      if (onError) {
+        onError(errorMsg)
+      }
+      console.error('Error processing unlinked emails:', err)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   if (emails.length === 0) {
     return null
   }
@@ -66,6 +94,37 @@ export function UnlinkedEmailsTray({ emails = [], applications = [], onEmailLink
         {/* Expanded content */}
         {isOpen && (
           <div className="mt-4 space-y-3">
+            {/* Processing buttons */}
+            <div className="flex gap-2 pb-4 border-b">
+              <button
+                onClick={() => handleProcessUnlinked(5)}
+                disabled={processing || emails.length === 0}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {processing ? 'Processing...' : 'Review & Process (Test 5)'}
+              </button>
+              <button
+                onClick={() => handleProcessUnlinked(null)}
+                disabled={processing || emails.length === 0}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {processing ? 'Processing...' : 'Process All'}
+              </button>
+            </div>
+
+            {/* Processing results */}
+            {processResult && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-900">
+                <p className="font-medium mb-1">{processResult.message}</p>
+                <ul className="text-xs space-y-1 ml-2">
+                  <li>✅ Linked: {processResult.linked}</li>
+                  <li>📧 Non-job-related: {processResult.non_job_related}</li>
+                  {processResult.errors && processResult.errors.length > 0 && (
+                    <li className="text-red-600">⚠️ Errors: {processResult.errors.length}</li>
+                  )}
+                </ul>
+              </div>
+            )}
             {error && (
               <div className="p-3 bg-destructive/10 border border-destructive text-destructive rounded text-sm mb-4">
                 {error}

@@ -8,8 +8,13 @@ load_dotenv()
 
 # Configuration class
 class Config:
-    # Database
-    DATABASE_PATH = os.getenv("DATABASE_PATH", "./jobs.db")
+    # Database - use path relative to project root (parent of backend/)
+    # Note: __file__ is relative when running from different directories,
+    # so we explicitly construct the path from the backend directory
+    _BACKEND_DIR = Path(__file__).parent
+    _PROJECT_ROOT = _BACKEND_DIR.parent
+    _DB_DEFAULT = str(_PROJECT_ROOT / "jobs.db")
+    DATABASE_PATH = os.getenv("DATABASE_PATH", _DB_DEFAULT)
 
     # Microsoft Graph API
     MS_GRAPH_CLIENT_ID = os.getenv("MS_GRAPH_CLIENT_ID")

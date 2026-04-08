@@ -274,6 +274,10 @@ function App() {
             onError={(err) => {
               setError(err)
             }}
+            onProcessed={() => {
+              // Refresh unlinked emails and stats after processing
+              loadData()
+            }}
           />
         </div>
         )}
