@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getApplications, getStats, getStageSuggestions, getUnlinkedEmails } from './api'
 import { KanbanBoard } from './KanbanBoard'
+import { CardDetail } from './CardDetail'
 import './App.css'
 
 function App() {
@@ -10,6 +11,8 @@ function App() {
   const [unlinkedEmails, setUnlinkedEmails] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedApp, setSelectedApp] = useState(null)
+  const [showCardDetail, setShowCardDetail] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -39,8 +42,8 @@ function App() {
   }
 
   const handleCardClick = (app) => {
-    // TODO: Open CardDetail panel
-    console.log('Card clicked:', app)
+    setSelectedApp(app)
+    setShowCardDetail(true)
   }
 
   const handleApplicationsChange = (updatedApps) => {
@@ -139,6 +142,16 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Card Detail Panel */}
+      <CardDetail
+        application={selectedApp}
+        isOpen={showCardDetail}
+        onClose={() => {
+          setShowCardDetail(false)
+          setSelectedApp(null)
+        }}
+      />
     </div>
   )
 }

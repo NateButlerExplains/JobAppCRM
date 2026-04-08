@@ -24,3 +24,5 @@ Starting fresh — infrastructure setup complete at 2026-04-08 14:30 UTC.
 [2026-04-08 17:18] CLAUDE-DEV finished | task: TASK-001 | files: tests/conftest.py | status: COMPLETE | all 4 bugs verified fixed, test_models.py 18/18 passed
 [2026-04-08 17:20] CLAUDE-DEV starting | task: TASK-002 (KanbanBoard component)
 [2026-04-08 17:21] CLAUDE-DEV finished | task: TASK-002 | files: frontend/src/KanbanBoard.jsx, frontend/src/ApplicationCard.jsx, frontend/src/App.jsx | status: COMPLETE | 5-column drag-and-drop board, all acceptance criteria met, frontend builds successfully
+[2026-04-08 17:22] CLAUDE-DEV starting | task: TASK-003 (CardDetail panel)
+[2026-04-08 17:24] CLAUDE-DEV finished | task: TASK-003 | files: frontend/src/CardDetail.jsx, frontend/src/AddInteraction.jsx, frontend/src/App.jsx | status: COMPLETE | right-side sheet with email list, interactions timeline, and add interaction modal all working
