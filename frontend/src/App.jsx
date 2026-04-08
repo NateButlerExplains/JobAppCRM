@@ -3,6 +3,7 @@ import { getApplications, getStats, getStageSuggestions, getUnlinkedEmails } fro
 import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
+import { UnlinkedEmailsTray } from './UnlinkedEmailsTray'
 import './App.css'
 
 function App() {
@@ -95,7 +96,8 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="min-h-screen flex flex-col bg-background">
+        <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
         {/* Stats Bar */}
         <div className="grid grid-cols-5 gap-4 mb-8">
           <div className="bg-card border rounded p-4">
@@ -130,16 +132,6 @@ function App() {
           />
         </div>
 
-        {/* Placeholder for Unlinked Emails */}
-        {unlinkedEmails.length > 0 && (
-          <div className="mb-8 p-8 bg-card border rounded">
-            <h2 className="font-bold mb-4">Unlinked Emails ({unlinkedEmails.length})</h2>
-            <div className="text-muted-foreground">
-              <p>Unlinked Emails Tray Component</p>
-            </div>
-          </div>
-        )}
-
         {/* Placeholder for Suggestions */}
         {suggestions.length > 0 && (
           <div className="p-8 bg-card border rounded">
@@ -149,6 +141,24 @@ function App() {
             </div>
           </div>
         )}
+        </div>
+
+        {/* Unlinked Emails Tray */}
+        <div className="mt-auto">
+          <UnlinkedEmailsTray
+            emails={unlinkedEmails}
+            applications={applications}
+            onEmailLinked={(emailId, appId) => {
+              // Remove email from unlinked list
+              setUnlinkedEmails(prev => prev.filter(e => e.id !== emailId))
+              // Reload data to update app's email count
+              loadData()
+            }}
+            onError={(err) => {
+              setError(err)
+            }}
+          />
+        </div>
       </main>
 
       {/* Card Detail Panel */}

@@ -28,3 +28,6 @@ Starting fresh — infrastructure setup complete at 2026-04-08 14:30 UTC.
 [2026-04-08 17:24] CLAUDE-DEV finished | task: TASK-003 | files: frontend/src/CardDetail.jsx, frontend/src/AddInteraction.jsx, frontend/src/App.jsx | status: COMPLETE | right-side sheet with email list, interactions timeline, and add interaction modal all working
 [2026-04-08 17:25] CLAUDE-DEV starting | task: TASK-004 (NewApplicationForm modal)
 [2026-04-08 17:26] CLAUDE-DEV finished | task: TASK-004 | files: frontend/src/NewApplicationForm.jsx, frontend/src/App.jsx | status: COMPLETE | modal form with all fields, integrates into header, new apps appear in kanban immediately
+[2026-04-08 17:27] CLAUDE-DEV noting | task: TASK-005 (AddInteraction modal) - Already built in TASK-003 as part of CardDetail integration, all acceptance criteria met, marking as complete
+[2026-04-08 17:27] CLAUDE-DEV starting | task: TASK-006 (UnlinkedEmailsTray component)
+[2026-04-08 17:29] CLAUDE-DEV finished | task: TASK-006 | files: frontend/src/UnlinkedEmailsTray.jsx, frontend/src/App.jsx | status: COMPLETE | collapsible panel at bottom, searchable dropdown, links emails to apps
