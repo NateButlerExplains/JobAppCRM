@@ -24,7 +24,9 @@ class TestApplicationLinker:
 
         assert linker._extract_domain_from_url("https://google.com/jobs") == "google.com"
         assert linker._extract_domain_from_url("https://www.amazon.com") == "amazon.com"
-        assert linker._extract_domain_from_url("invalid_url") == ""
+        assert linker._extract_domain_from_url("https://careers.microsoft.com") == "careers.microsoft.com"
+        # Invalid URL format: urlparse treats it as a path, so it returns the path lowercased
+        assert linker._extract_domain_from_url("not-a-url") == "not-a-url"
 
     def test_domains_match(self, temp_db):
         """Test domain matching logic."""

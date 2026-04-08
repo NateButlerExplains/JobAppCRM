@@ -26,9 +26,16 @@
 
 ## Current In-Progress Task
 
-(No tasks currently in progress — queue is empty)
-
-**Next recommended task:** TASK-012 (Comprehensive test suite for backend)
+### TASK-012: Comprehensive test suite for backend
+- **Status:** in-progress
+- **Priority:** high
+- **Assigned to:** CLAUDE-DEV
+- **Started:** 2026-04-09 14:00 UTC
+- **Work in progress:**
+  - Writing integration tests for all models
+  - Mocking external APIs (MS Graph, Gemini)
+  - Targeting >80% code coverage
+  - Setting up pytest-cov for coverage reports
 
 ---
 

@@ -49,3 +49,4 @@ Starting fresh — infrastructure setup complete at 2026-04-08 14:30 UTC.
 [2026-04-08 17:38] CLAUDE-DEV finished | task: TASK-010 | files: README.md | status: COMPLETE | comprehensive guide covering setup, API keys, running the app, architecture, troubleshooting
 [2026-04-08 18:45] CLAUDE-DEV working | task: TASK-011 | infrastructure: added CONTRACTOR_BRIEF.md, updated CLAUDE.md with New Agent Protocol, updated AGENT_LOG.md format enforcement
 [2026-04-08 19:30] CODEX finished | task: TASK-011 | files: backend/auth.py, backend/app.py, backend/email_processor.py, backend/models.py, backend/config.py, frontend/src/Settings.jsx, frontend/src/api.js, .env.example | status: COMPLETE | pagination fix (@odata.nextLink), per-email progress updates, cancel sync, Gemini health check, configurable model/progress interval
+[2026-04-09 14:00] CLAUDE-DEV starting | task: TASK-012 | comprehensive backend test suite with >80% coverage
