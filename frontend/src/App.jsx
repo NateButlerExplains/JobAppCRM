@@ -4,6 +4,7 @@ import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
 import { UnlinkedEmailsTray } from './UnlinkedEmailsTray'
+import { Settings } from './Settings'
 import './App.css'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [selectedApp, setSelectedApp] = useState(null)
   const [showCardDetail, setShowCardDetail] = useState(false)
   const [showNewAppForm, setShowNewAppForm] = useState(false)
+  const [currentPage, setCurrentPage] = useState('dashboard') // 'dashboard' or 'settings'
 
   useEffect(() => {
     loadData()
@@ -53,7 +55,7 @@ function App() {
     setApplications(updatedApps)
   }
 
-  if (loading) {
+  if (loading && currentPage === 'dashboard') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -64,7 +66,7 @@ function App() {
     )
   }
 
-  if (error) {
+  if (error && currentPage === 'dashboard') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -81,23 +83,55 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-foreground">Job Application CRM</h1>
-          <button
-            onClick={() => setShowNewAppForm(true)}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity font-medium"
-          >
-            + New Application
-          </button>
+      <header className="border-b bg-card sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-bold text-foreground">Job Application CRM</h1>
+            {currentPage === 'dashboard' && (
+              <button
+                onClick={() => setShowNewAppForm(true)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity font-medium"
+              >
+                + New Application
+              </button>
+            )}
+          </div>
+
+          {/* Navigation */}
+          <div className="flex gap-4 border-t pt-3">
+            <button
+              onClick={() => setCurrentPage('dashboard')}
+              className={`px-3 py-2 rounded font-medium transition-colors ${
+                currentPage === 'dashboard'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setCurrentPage('settings')}
+              className={`px-3 py-2 rounded font-medium transition-colors ${
+                currentPage === 'settings'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              Settings
+            </button>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="min-h-screen flex flex-col bg-background">
+      <main className="flex-1 flex flex-col bg-background">
         <div className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+          {currentPage === 'settings' && <Settings />}
+          {currentPage === 'dashboard' && (
+            <>
+
         {/* Stats Bar */}
         <div className="grid grid-cols-5 gap-4 mb-8">
           <div className="bg-card border rounded p-4">
@@ -132,18 +166,21 @@ function App() {
           />
         </div>
 
-        {/* Placeholder for Suggestions */}
-        {suggestions.length > 0 && (
-          <div className="p-8 bg-card border rounded">
-            <h2 className="font-bold mb-4">Stage Suggestions ({suggestions.length})</h2>
-            <div className="text-muted-foreground">
-              <p>Stage Suggestions Component</p>
-            </div>
-          </div>
-        )}
+            {/* Placeholder for Suggestions */}
+            {suggestions.length > 0 && (
+              <div className="p-8 bg-card border rounded">
+                <h2 className="font-bold mb-4">Stage Suggestions ({suggestions.length})</h2>
+                <div className="text-muted-foreground">
+                  <p>Stage Suggestions Component</p>
+                </div>
+              </div>
+            )}
+            </>
+          )}
         </div>
 
         {/* Unlinked Emails Tray */}
+        {currentPage === 'dashboard' && (
         <div className="mt-auto">
           <UnlinkedEmailsTray
             emails={unlinkedEmails}
@@ -159,6 +196,7 @@ function App() {
             }}
           />
         </div>
+        )}
       </main>
 
       {/* Card Detail Panel */}

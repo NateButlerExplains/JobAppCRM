@@ -31,3 +31,5 @@ Starting fresh — infrastructure setup complete at 2026-04-08 14:30 UTC.
 [2026-04-08 17:27] CLAUDE-DEV noting | task: TASK-005 (AddInteraction modal) - Already built in TASK-003 as part of CardDetail integration, all acceptance criteria met, marking as complete
 [2026-04-08 17:27] CLAUDE-DEV starting | task: TASK-006 (UnlinkedEmailsTray component)
 [2026-04-08 17:29] CLAUDE-DEV finished | task: TASK-006 | files: frontend/src/UnlinkedEmailsTray.jsx, frontend/src/App.jsx | status: COMPLETE | collapsible panel at bottom, searchable dropdown, links emails to apps
+[2026-04-08 17:31] CLAUDE-DEV starting | task: TASK-007 (Settings page)
+[2026-04-08 17:33] CLAUDE-DEV finished | task: TASK-007 | files: frontend/src/Settings.jsx, frontend/src/App.jsx | status: COMPLETE | manual sync button with polling, sync history table with all metrics
