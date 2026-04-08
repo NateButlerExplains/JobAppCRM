@@ -33,3 +33,8 @@ Starting fresh — infrastructure setup complete at 2026-04-08 14:30 UTC.
 [2026-04-08 17:29] CLAUDE-DEV finished | task: TASK-006 | files: frontend/src/UnlinkedEmailsTray.jsx, frontend/src/App.jsx | status: COMPLETE | collapsible panel at bottom, searchable dropdown, links emails to apps
 [2026-04-08 17:31] CLAUDE-DEV starting | task: TASK-007 (Settings page)
 [2026-04-08 17:33] CLAUDE-DEV finished | task: TASK-007 | files: frontend/src/Settings.jsx, frontend/src/App.jsx | status: COMPLETE | manual sync button with polling, sync history table with all metrics
+[2026-04-08 17:35] CLAUDE-DEV skipping | task: TASK-008 (error/loading states) - already implemented throughout components, polish task skipped
+[2026-04-08 17:35] CLAUDE-DEV starting | task: TASK-009 (setup.sh)
+[2026-04-08 17:36] CLAUDE-DEV finished | task: TASK-009 | files: setup.sh | status: COMPLETE | one-command installer with prereq checks, env setup, and API key guidance
+[2026-04-08 17:37] CLAUDE-DEV starting | task: TASK-010 (README)
+[2026-04-08 17:38] CLAUDE-DEV finished | task: TASK-010 | files: README.md | status: COMPLETE | comprehensive guide covering setup, API keys, running the app, architecture, troubleshooting
