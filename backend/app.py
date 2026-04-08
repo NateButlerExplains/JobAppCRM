@@ -19,7 +19,14 @@ logging.basicConfig(
 # Initialize Flask app
 app = Flask(__name__)
 app.config["JSON_SORT_KEYS"] = False
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"],
+        "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True
+    }
+})
 
 # Initialize database
 db = Database(Config.DATABASE_PATH)
@@ -333,7 +340,7 @@ if __name__ == "__main__":
         # Run Flask app with use_reloader=False to avoid double-scheduling
         app.run(
             host="localhost",
-            port=5000,
+            port=Config.FLASK_PORT,
             debug=Config.FLASK_DEBUG,
             use_reloader=False,
         )

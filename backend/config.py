@@ -37,6 +37,7 @@ class Config:
     # Flask settings
     FLASK_ENV = os.getenv("FLASK_ENV", "development")
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    FLASK_PORT = int(os.getenv("FLASK_PORT", "5001"))
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-key-change-in-production")
 
     # Logging
