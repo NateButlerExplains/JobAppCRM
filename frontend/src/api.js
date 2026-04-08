@@ -10,7 +10,14 @@ const api = axios.create({
 })
 
 // Applications
-export const getApplications = () => api.get('/applications')
+export const getApplications = (search = '', status = '', emailType = '') => {
+  const params = new URLSearchParams()
+  if (search) params.append('search', search)
+  if (status) params.append('status', status)
+  if (emailType) params.append('email_type', emailType)
+  const queryString = params.toString()
+  return api.get(`/applications${queryString ? '?' + queryString : ''}`)
+}
 export const createApplication = (data) => api.post('/applications', data)
 export const getApplication = (id) => api.get(`/applications/${id}`)
 export const updateApplication = (id, data) => api.patch(`/applications/${id}`, data)
@@ -18,6 +25,7 @@ export const deleteApplication = (id) => api.delete(`/applications/${id}`)
 export const getApplicationEmails = (id) => api.get(`/applications/${id}/emails`)
 export const getApplicationInteractions = (id) => api.get(`/applications/${id}/interactions`)
 export const createInteraction = (appId, data) => api.post(`/applications/${appId}/interactions`, data)
+export const getFilterOptions = () => api.get('/filter-options')
 
 // Stats
 export const getStats = () => api.get('/stats')

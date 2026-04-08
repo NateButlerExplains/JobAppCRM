@@ -175,9 +175,52 @@ def init_scheduler():
 
 @app.route("/api/applications", methods=["GET"])
 def get_applications():
-    """Get all applications."""
+    """Get applications with optional search and filters."""
     try:
+        search_term = request.args.get("search", "").strip()
+        status_filter = request.args.get("status", "").strip()
+        email_type_filter = request.args.get("email_type", "").strip()
+
         apps = Application.get_all(db)
+
+        # Apply search filter (company name, job title, or sender email)
+        if search_term:
+            search_lower = search_term.lower()
+            filtered_apps = []
+            for app in apps:
+                # Check company name and job title
+                if (search_lower in app.get("company_name", "").lower() or
+                    search_lower in app.get("job_title", "").lower()):
+                    filtered_apps.append(app)
+                else:
+                    # Check email senders for this application
+                    try:
+                        emails = Email.get_by_application(db, app["id"])
+                        for email in emails:
+                            if search_lower in email.get("sender", "").lower():
+                                filtered_apps.append(app)
+                                break
+                    except:
+                        pass
+            apps = filtered_apps
+
+        # Apply status filter
+        if status_filter:
+            apps = [app for app in apps if app.get("status") == status_filter]
+
+        # Apply email type filter
+        if email_type_filter:
+            filtered_by_type = []
+            for app in apps:
+                try:
+                    emails = Email.get_by_application(db, app["id"])
+                    # Check if any email has the requested type
+                    if any(email.get("email_type") == email_type_filter for email in emails):
+                        filtered_by_type.append(app)
+                except:
+                    pass
+            apps = filtered_by_type
+
         return jsonify(apps), 200
     except Exception as e:
         logger.error(f"Error fetching applications: {e}")
@@ -206,6 +249,36 @@ def create_application():
         return jsonify(app), 201
     except Exception as e:
         logger.error(f"Error creating application: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/filter-options", methods=["GET"])
+def get_filter_options():
+    """Get available filter options (statuses and email types)."""
+    try:
+        apps = Application.get_all(db)
+        statuses = set()
+        email_types = set()
+
+        for app in apps:
+            status = app.get("status")
+            if status:
+                statuses.add(status)
+            try:
+                emails = Email.get_by_application(db, app["id"])
+                for email in emails:
+                    email_type = email.get("email_type")
+                    if email_type:
+                        email_types.add(email_type)
+            except:
+                pass
+
+        return jsonify({
+            "statuses": sorted(list(statuses)),
+            "email_types": sorted(list(email_types))
+        }), 200
+    except Exception as e:
+        logger.error(f"Error fetching filter options: {e}")
         return jsonify({"error": str(e)}), 500
 
 

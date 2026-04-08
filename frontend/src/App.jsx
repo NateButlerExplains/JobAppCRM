@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getApplications, getStats, getStageSuggestions, getUnlinkedEmails } from './api'
+import { getApplications, getStats, getStageSuggestions, getUnlinkedEmails, getFilterOptions } from './api'
 import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
@@ -18,31 +18,54 @@ function App() {
   const [showCardDetail, setShowCardDetail] = useState(false)
   const [showNewAppForm, setShowNewAppForm] = useState(false)
   const [currentPage, setCurrentPage] = useState('dashboard') // 'dashboard' or 'settings'
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [emailTypeFilter, setEmailTypeFilter] = useState('')
+  const [filterOptions, setFilterOptions] = useState({ statuses: [], email_types: [] })
 
   useEffect(() => {
     loadData()
   }, [])
 
+  // Debounced search and filter
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadFilteredApplications()
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm, statusFilter, emailTypeFilter])
+
   const loadData = async () => {
     setLoading(true)
     setError(null)
     try {
-      const [appsRes, statsRes, suggestionsRes, emailsRes] = await Promise.all([
+      const [appsRes, statsRes, suggestionsRes, emailsRes, optionsRes] = await Promise.all([
         getApplications(),
         getStats(),
         getStageSuggestions(),
         getUnlinkedEmails(),
+        getFilterOptions(),
       ])
 
       setApplications(appsRes.data)
       setStats(statsRes.data)
       setSuggestions(suggestionsRes.data)
       setUnlinkedEmails(emailsRes.data)
+      setFilterOptions(optionsRes.data)
     } catch (err) {
       setError(err.message)
       console.error('Error loading data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadFilteredApplications = async () => {
+    try {
+      const res = await getApplications(searchTerm, statusFilter, emailTypeFilter)
+      setApplications(res.data)
+    } catch (err) {
+      console.error('Error loading filtered applications:', err)
     }
   }
 
@@ -131,6 +154,63 @@ function App() {
           {currentPage === 'settings' && <Settings />}
           {currentPage === 'dashboard' && (
             <>
+
+        {/* Search and Filters */}
+        <div className="bg-card border rounded p-4 mb-6">
+          <div className="space-y-4">
+            {/* Search Box */}
+            <div>
+              <input
+                type="text"
+                placeholder="Search by company, job title, or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border rounded bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-2">
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">All Statuses</option>
+                {filterOptions.statuses?.map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+
+              {/* Email Type Filter */}
+              <select
+                value={emailTypeFilter}
+                onChange={(e) => setEmailTypeFilter(e.target.value)}
+                className="px-3 py-2 border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">All Email Types</option>
+                {filterOptions.email_types?.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+
+              {/* Clear Filters Button */}
+              {(searchTerm || statusFilter || emailTypeFilter) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('')
+                    setStatusFilter('')
+                    setEmailTypeFilter('')
+                  }}
+                  className="px-3 py-2 bg-muted text-muted-foreground rounded hover:bg-muted/80 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Stats Bar */}
         <div className="grid grid-cols-5 gap-4 mb-8">
