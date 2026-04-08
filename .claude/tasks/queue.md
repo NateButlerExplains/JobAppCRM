@@ -26,52 +26,15 @@
 
 ## Current In-Progress Task
 
-(No tasks currently in-progress)
-
-**Next recommended task:** TASK-013 (Frontend unit + integration tests)
+### TASK-014: Performance profiling and optimization
+- **Status:** in-progress (CEO decision: move to Phase 4 focus)
+- **Priority:** medium
+- **Assigned to:** CLAUDE-DEV
+- **Started:** 2026-04-09 15:30 UTC
 
 ---
 
 ## Queued Tasks (Next to Implement)
-
-### TASK-012: Comprehensive test suite for backend
-- **Status:** queued
-- **Priority:** high
-- **Files:** tests/test_models.py, tests/test_api.py, tests/test_auth.py, tests/test_email_processor.py
-- **Spec:**
-  - Write integration tests covering all CRUD operations for models (Application, Email, Interaction, StageSuggestion, SyncLog)
-  - Test email sync end-to-end (mock MS Graph, verify classification, linking, suggestions)
-  - Test API routes: auth flow, manual sync, email linking, stage suggestions
-  - Mock external APIs (MS Graph, Gemini) for reliable unit tests
-  - Achieve >80% code coverage for backend modules
-  - All tests pass with SQLite in-memory database
-- **Acceptance Criteria:**
-  - `pytest tests/ -v` passes with 0 failures
-  - Coverage report shows >80% coverage (use pytest-cov)
-  - All mocked API responses handled correctly
-  - Concurrent sync tests pass (verify scheduler isolation)
-
----
-
-### TASK-013: Frontend unit + integration tests
-- **Status:** queued
-- **Priority:** high
-- **Files:** frontend/src/**/__tests__/*.test.jsx, frontend/vitest.config.js
-- **Spec:**
-  - Set up Vitest + React Testing Library for frontend testing
-  - Test key components: KanbanBoard (drag/drop), CardDetail (tabs), Settings (sync polling)
-  - Mock API client (axios) for all backend calls
-  - Test error states: network failures, API errors, timeouts
-  - Test edge cases: empty lists, very large email counts, cancelled syncs
-  - Achieve >70% component coverage
-- **Acceptance Criteria:**
-  - `npm run test` passes all tests
-  - Coverage report shows >70%
-  - Drag-and-drop mechanics tested
-  - Polling and ETA display tested
-  - Error toasts display correctly
-
----
 
 ### TASK-014: Performance profiling and optimization
 - **Status:** queued
@@ -312,7 +275,7 @@
 
 ## Completed Tasks ✅
 
-## TASK-012: Comprehensive test suite for backend
+## TASK-012: Comprehensive test suite for backend (Phase 4)
 - **Status:** completed
 - **Priority:** high
 - **Completed by:** CLAUDE-DEV
@@ -548,6 +511,31 @@
 - **Acceptance Criteria:**
   - README is complete, clear, and actionable
   - Someone new could set up the project from README alone
+
+---
+
+---
+
+## Backlog — Lower Priority / Deferred
+
+### TASK-013: Frontend unit + integration tests
+- **Status:** backlog (deferred by CEO decision 2026-04-09)
+- **Priority:** medium (nice-to-have, not blocking)
+- **Reason deferred:** App is functionally complete. Frontend test infrastructure set up but blocked on API mocking. Prioritized Phase 5 (Docker, scheduling, search) for more user-facing value.
+- **Files:** frontend/src/**/__tests__/*.test.jsx, frontend/vitest.config.js
+- **Spec:**
+  - Fix API mocking (currently uses axios; switch to MSW for better control)
+  - Test key components: KanbanBoard (drag/drop), CardDetail (tabs), Settings (sync polling)
+  - Test error states: network failures, API errors, timeouts
+  - Test edge cases: empty lists, very large email counts, cancelled syncs
+  - Achieve >70% component coverage
+- **Acceptance Criteria:**
+  - `npm run test` passes all tests
+  - Coverage report shows >70%
+  - Drag-and-drop mechanics tested
+  - Polling and ETA display tested
+  - Error toasts display correctly
+- **To resume:** Debug mock setup, then implement test cases for 4 main components
 
 ---
 
