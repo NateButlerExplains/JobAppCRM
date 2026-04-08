@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules
+venv
+.venv
+*.egg-info
+__pycache__
+
+# Build artifacts
+dist
+build
+*.pyc
+*.pyo
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+.coverage
+htmlcov
+.pytest_cache
+
+# Project specific
+.claude/
+CLAUDE.md
+README.md
+docs/
+tests/
+scripts/
+
+# Temporary
+*.tmp
+temp/

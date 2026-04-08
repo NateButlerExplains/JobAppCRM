@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: jobcrm-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:////data/jobs.db
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      - SYNC_PROGRESS_EVERY=${SYNC_PROGRESS_EVERY:-10}
+      - VITE_API_BASE=${VITE_API_BASE:-http://localhost:5000}
+    volumes:
+      - ./data:/data
+      - ./logs:/app/logs
+    depends_on:
+      - frontend
+    networks:
+      - jobcrm-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: jobcrm-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE=${VITE_API_BASE:-http://localhost:5000}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - jobcrm-network
+    restart: unless-stopped
+
+volumes:
+  data:
+    driver: local
+
+networks:
+  jobcrm-network:
+    driver: bridge
