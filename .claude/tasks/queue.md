@@ -10,11 +10,305 @@
 
 ---
 
+## Phase Overview
+
+| Phase | Tasks | Status | Purpose |
+|-------|-------|--------|---------|
+| **Phase 1** | TASK-001 | ✅ Complete | Backend core modules (auth, models, processor, API) |
+| **Phase 2** | TASK-002–010 | ✅ Complete | Frontend UI components (Kanban, cards, modals, settings) |
+| **Phase 3** | TASK-011 | ✅ Complete | MS Graph OAuth + email sync integration |
+| **Phase 4** | TASK-012–014 | 📋 Queued | Testing, profiling, optimization |
+| **Phase 5** | TASK-015–017 | 📋 Queued | Containerization, scheduling, search/filter |
+| **Phase 6** | TASK-018–020 | 📋 Queued | Reports, accessibility, security |
+| **Phase 7** | TASK-021–022+ | 📋 Queued | Deployment, monitoring, user docs |
+
+---
+
 ## Current In-Progress Task
 
 (No tasks currently in progress — queue is empty)
 
+**Next recommended task:** TASK-012 (Comprehensive test suite for backend)
+
 ---
+
+## Queued Tasks (Next to Implement)
+
+### TASK-012: Comprehensive test suite for backend
+- **Status:** queued
+- **Priority:** high
+- **Files:** tests/test_models.py, tests/test_api.py, tests/test_auth.py, tests/test_email_processor.py
+- **Spec:**
+  - Write integration tests covering all CRUD operations for models (Application, Email, Interaction, StageSuggestion, SyncLog)
+  - Test email sync end-to-end (mock MS Graph, verify classification, linking, suggestions)
+  - Test API routes: auth flow, manual sync, email linking, stage suggestions
+  - Mock external APIs (MS Graph, Gemini) for reliable unit tests
+  - Achieve >80% code coverage for backend modules
+  - All tests pass with SQLite in-memory database
+- **Acceptance Criteria:**
+  - `pytest tests/ -v` passes with 0 failures
+  - Coverage report shows >80% coverage (use pytest-cov)
+  - All mocked API responses handled correctly
+  - Concurrent sync tests pass (verify scheduler isolation)
+
+---
+
+### TASK-013: Frontend unit + integration tests
+- **Status:** queued
+- **Priority:** high
+- **Files:** frontend/src/**/__tests__/*.test.jsx, frontend/vitest.config.js
+- **Spec:**
+  - Set up Vitest + React Testing Library for frontend testing
+  - Test key components: KanbanBoard (drag/drop), CardDetail (tabs), Settings (sync polling)
+  - Mock API client (axios) for all backend calls
+  - Test error states: network failures, API errors, timeouts
+  - Test edge cases: empty lists, very large email counts, cancelled syncs
+  - Achieve >70% component coverage
+- **Acceptance Criteria:**
+  - `npm run test` passes all tests
+  - Coverage report shows >70%
+  - Drag-and-drop mechanics tested
+  - Polling and ETA display tested
+  - Error toasts display correctly
+
+---
+
+### TASK-014: Performance profiling and optimization
+- **Status:** queued
+- **Priority:** medium
+- **Files:** backend/email_processor.py, frontend/src/KanbanBoard.jsx, docs/PERFORMANCE.md
+- **Spec:**
+  - Profile email sync with 1000+ emails: measure classification + linking speed
+  - Identify bottlenecks: Gemini rate limiting, DB queries, network latency
+  - Optimize: batch Gemini requests (if API allows), DB query indexing, frontend virtualization for large lists
+  - Document: PERFORMANCE.md with profiling results and recommendations
+  - Set performance budgets: sync should process 100 emails/minute minimum
+- **Acceptance Criteria:**
+  - Profile report shows sync speed (emails/minute)
+  - Identified 3+ optimization opportunities with measurements
+  - At least 1 optimization implemented and verified
+  - PERFORMANCE.md documents baseline and improvements
+  - Sync 1000 emails in <10 minutes
+
+---
+
+### TASK-015: Docker containerization
+- **Status:** queued
+- **Priority:** medium
+- **Files:** Dockerfile, docker-compose.yml, .dockerignore
+- **Spec:**
+  - Create Dockerfile for backend (Python 3.11, Flask, APScheduler)
+  - Create Dockerfile for frontend (Node.js, Vite build, static serve)
+  - Create docker-compose.yml orchestrating both services + volume for SQLite DB
+  - Volumes for logs, database persistence across container restarts
+  - Environment variables configurable via .env passed to containers
+  - Scripts for building and running: `docker-compose up`
+- **Acceptance Criteria:**
+  - `docker-compose up` starts both services
+  - Frontend accessible at localhost:3000, backend at localhost:5001
+  - SQLite DB persists across restarts
+  - Logs visible via `docker-compose logs`
+  - .env configuration applied to both containers
+
+---
+
+### TASK-016: Automated email sync scheduling
+- **Status:** queued
+- **Priority:** medium
+- **Files:** backend/app.py, backend/config.py, frontend/src/Settings.jsx
+- **Spec:**
+  - Add UI in Settings to configure auto-sync schedule (daily, every 4 hours, on-demand only)
+  - Persist schedule preference to database (new column in config table or simple key-value store)
+  - APScheduler already running 2 AM daily; add dynamic scheduling based on user preference
+  - Add "next sync" countdown timer in Settings UI
+  - Test: manually change schedule, verify APScheduler jobs update without restart
+- **Acceptance Criteria:**
+  - Settings UI has schedule selector (daily, 4-hourly, manual only)
+  - Selected schedule persists across app restart
+  - APScheduler dynamically adds/removes jobs
+  - Frontend shows next scheduled sync time
+  - Manual sync still available regardless of schedule
+
+---
+
+### TASK-017: Email filtering and search in UI
+- **Status:** queued
+- **Priority:** medium
+- **Files:** frontend/src/App.jsx, frontend/src/KanbanBoard.jsx, backend/app.py
+- **Spec:**
+  - Add search box in Kanban board header (search by company name, job title, email sender)
+  - Add filter pills: by status, by email type (offer, rejection, interview request, etc.)
+  - Backend filters: GET /api/applications with `?search=term&status=submitted&email_type=offer`
+  - Frontend implements debounced search (300ms) to avoid excessive API calls
+  - Filters are URL-searchable (state in query params: `?search=google&status=interview`)
+- **Acceptance Criteria:**
+  - Typing in search box filters applications in real-time
+  - Filter pills update Kanban view
+  - URL reflects current filters
+  - Can share filtered view via URL
+  - Filters work together (AND logic)
+
+---
+
+### TASK-018: Export and reporting features
+- **Status:** queued
+- **Priority:** low
+- **Files:** backend/app.py, frontend/src/Reports.jsx
+- **Spec:**
+  - Add Reports page (new tab in Settings) with:
+    - Summary stats: total applications, offers, rejections, conversion rate
+    - Timeline chart: applications submitted over time
+    - Status breakdown pie chart: % in each pipeline stage
+    - Email volume chart: emails per week
+    - Export buttons: CSV (all applications), PDF report (summary + charts)
+  - Backend API: GET /api/reports returns stats for charting
+  - Use Chart.js or Recharts for frontend charts
+- **Acceptance Criteria:**
+  - Reports page loads with 4+ visualizations
+  - Stats accurately reflect data in database
+  - CSV export includes all application fields
+  - PDF export is readable and includes charts
+  - Report updates when new data is synced
+
+---
+
+### TASK-019: Keyboard shortcuts and accessibility
+- **Status:** queued
+- **Priority:** low
+- **Files:** frontend/src/**/*.jsx, frontend/src/hooks/useKeyboardShortcuts.js
+- **Spec:**
+  - Add keyboard shortcuts: `Cmd+N` new application, `Cmd+/` open search, `Esc` close modals/panels
+  - Implement ARIA labels on all interactive elements
+  - Ensure all colors have sufficient contrast (WCAG AA)
+  - Test with screen reader (VoiceOver on Mac or NVDA simulator)
+  - Add focus indicators on all buttons and inputs
+  - Make Kanban keyboard-navigable (arrow keys to move between cards)
+- **Acceptance Criteria:**
+  - All shortcuts work and are documented (help modal with Cmd+?)
+  - ARIA labels present on buttons, inputs, lists
+  - Color contrast >= 4.5:1 for text
+  - Screen reader announces all content correctly
+  - Focus visible on all interactive elements
+  - Kanban navigable via arrow keys
+
+---
+
+### TASK-020: Security hardening
+- **Status:** queued
+- **Priority:** high
+- **Files:** backend/app.py, backend/config.py, frontend/src/api.js, docs/SECURITY.md
+- **Spec:**
+  - Add CSRF protection (Flask-Talisman or similar)
+  - Validate all API inputs (schema validation with Pydantic or similar)
+  - Add rate limiting on sensitive endpoints (auth, sync)
+  - Hash and salt any secrets in database (if stored)
+  - Add Content-Security-Policy headers
+  - Document security model in SECURITY.md
+  - Audit for SQL injection, XSS, CORS misconfigurations
+- **Acceptance Criteria:**
+  - API rejects invalid input with 400 error
+  - Rate limiting blocks >N requests/sec from same IP
+  - CSP headers prevent inline scripts
+  - CORS only allows localhost:3000 in dev, configurable for prod
+  - Security audit checklist completed
+  - SECURITY.md documents threat model and mitigations
+
+---
+
+### TASK-021: Deployment guide (systemd + Nginx)
+- **Status:** queued
+- **Priority:** low
+- **Files:** docs/DEPLOY.md, systemd/jobcrm-backend.service, systemd/jobcrm-frontend.service, nginx/jobcrm.conf
+- **Spec:**
+  - Write step-by-step guide to deploy on Ubuntu/Debian Linux
+  - Create systemd service files for backend (Flask) and frontend (Vite build + static serve)
+  - Create Nginx reverse proxy config (frontend :80/443, backend :8000)
+  - Guide for SSL cert (Let's Encrypt), environment setup, log rotation
+  - Include health check scripts and monitoring setup
+- **Acceptance Criteria:**
+  - DEPLOY.md is clear and testable by new user
+  - Systemd services start/stop cleanly
+  - Nginx proxy routes /api to backend, / to frontend
+  - SSL works (self-signed cert OK for testing)
+  - Health checks pass post-deployment
+
+---
+
+### TASK-022: Application analytics and insights
+- **Status:** queued
+- **Priority:** low
+- **Files:** backend/app.py, frontend/src/Analytics.jsx, backend/models.py
+- **Spec:**
+  - Track application metrics: time-in-stage, response rates, offer rate, avg emails per application
+  - Add Analytics page with insights: "You have 5 applications in interview stage (avg 12 days)", "3 of 10 rejections included feedback emails"
+  - Trending: applications submitted last month vs this month, conversion funnel (submitted → interview → offer)
+  - Export trends as CSV for personal records
+  - No external analytics service (all local, in SQLite)
+- **Acceptance Criteria:**
+  - Analytics page loads with 5+ key metrics
+  - Trends calculated correctly from database
+  - All calculations use local data only
+  - CSV export includes all metrics and formulas explained
+
+---
+
+### TASK-023: Email webhook receiver (optional forward-sync)
+- **Status:** queued
+- **Priority:** low
+- **Files:** backend/app.py, backend/webhook_handler.py
+- **Spec:**
+  - Allow optional webhook setup so emails can be forwarded to a special address (e.g., jobcrm+webhook@domain.com)
+  - Webhook receives forwarded emails and creates Email entries in database (without full MS Graph sync)
+  - Useful for capturing emails on non-Outlook accounts or forwarded threads
+  - Document how to set up mail forwarding rule
+- **Acceptance Criteria:**
+  - Webhook endpoint validates email format and prevents spam
+  - Forwarded emails stored in database
+  - UI shows "sync via webhook" as an alternative to Outlook
+  - Rate limiting prevents abuse
+
+---
+
+### TASK-024: Browser extension (optional)
+- **Status:** queued
+- **Priority:** low
+- **Files:** extension/manifest.json, extension/popup.html, extension/content.js
+- **Spec:**
+  - Chrome/Firefox extension to capture job postings or emails from browser
+  - Right-click "Add to JobCRM" context menu on job postings
+  - Popup form to add application (pre-fill company from page title, link to job URL)
+  - POST to localhost:5001/api/applications with company, job_title, job_url
+  - Useful for quick capture while browsing job boards
+- **Acceptance Criteria:**
+  - Extension installs and loads
+  - Context menu appears on right-click
+  - Popup form functional
+  - New applications appear in Kanban immediately
+  - Works on common job boards (LinkedIn, Indeed, Glassdoor)
+
+---
+
+### TASK-025: Notification center and alerts
+- **Status:** queued
+- **Priority:** low
+- **Files:** backend/app.py, frontend/src/NotificationCenter.jsx, backend/models.py
+- **Spec:**
+  - Add in-app notification panel (bell icon in header)
+  - Alert on important events: offer received, rejection after long silence, stage suggestion
+  - Optional browser notifications (if user grants permission)
+  - Notification history (last 30 notifications)
+  - Mark as read / dismiss functionality
+  - No external push services (all local in-app)
+- **Acceptance Criteria:**
+  - Notification bell shows unread count
+  - Clicking bell opens notification panel
+  - New emails/events trigger notifications
+  - Browser notifications work if enabled
+  - Notification history persists across sessions
+
+---
+
+## Completed Tasks (Earlier Phases)
 
 ## Completed Tasks ✅
 
