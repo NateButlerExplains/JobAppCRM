@@ -53,14 +53,42 @@ class GeminiClassifier:
             logger.error(f"Failed to parse JSON: {text[:200]}")
             return None
 
+    def _clean_body_for_classification(self, text: str) -> str:
+        """Clean email body for Gemini classification: remove tracking junk and normalize whitespace.
+
+        Removes:
+        - Zero-width and invisible Unicode chars (U+200B-U+200F, U+2028-U+202E, U+034F, U+FEFF)
+        - URLs and bracketed URL labels (tracking links add nothing for classification)
+        - Excessive whitespace
+
+        Args:
+            text: Raw email body text (may contain stored body_excerpt from DB)
+
+        Returns:
+            Cleaned text suitable for Gemini classification
+        """
+        # Remove zero-width and invisible unicode chars
+        text = re.sub(r'[\u200b-\u200f\u2028\u2029\u202a-\u202e\u034f\ufeff]', '', text)
+        # Remove URLs (tracking links add nothing for classification)
+        text = re.sub(r'https?://\S+', '', text)
+        # Remove bracketed URL labels like [Indeed] or [https://...]
+        text = re.sub(r'\[https?://[^\]]*\]', '', text)
+        text = re.sub(r'\[[A-Z][a-z]+\]\s*', '', text)
+        # Collapse whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text
+
     def classify_email(self, subject: str, body: str, sender: str) -> Dict[str, Any]:
         """Classify an email and return structured information."""
         gemini_rate_limiter.wait()
 
+        # Clean body for classification (handles stored body_excerpt from DB)
+        clean_body = self._clean_body_for_classification(body)[:1000]
+
         prompt = f"""You are an email classifier for job applications. Analyze the following email and respond ONLY with JSON, no markdown formatting.
 
 Email Subject: {subject}
-Email Body: {body[:2000]}
+Email Body: {clean_body}
 Sender: {sender}
 
 Classify as ONE of:
@@ -71,9 +99,16 @@ Classify as ONE of:
 5. "more_info_needed" - Requesting more information from you
 6. "unrelated" - Not job-related (newsletters, notifications, marketing, social emails)
 
-KEYWORDS FOR application_confirmation: "application received", "application status", "we received your", "confirmation of application", "application submitted"
+KEYWORDS FOR application_confirmation: "application received", "application status", "we received your", "confirmation of application", "application submitted", "Indeed Application:", "your application was sent", "application to", "thank you for applying", "thank you for your application", "has been received"
+
 KEYWORDS FOR job_lead: "we found", "recommended for you", "job match", "based on your profile", "we think you'd be great"
-KEYWORDS FOR unrelated: "newsletter", "check out jobs", "notification", "social", "book recommendation", "sign in detected"
+
+KEYWORDS FOR unrelated: "newsletter", "notification", "social", "book recommendation", "sign in detected", "weekly digest"
+
+SENDER GUIDANCE:
+- Emails from HR platforms (ADP domains like *.hr@adp.com, Workday, Greenhouse, Indeed, Lever, Smartrecruiters) about applications → always application_confirmation
+- Emails from LinkedIn job alerts (jobs-noreply@linkedin.com) with patterns like "your application was sent" → application_confirmation
+- Do NOT classify HR platform emails as unrelated even if body is unclear
 
 Respond with:
 {{
@@ -86,7 +121,7 @@ Respond with:
   "confidence": 0.0-1.0
 }}
 
-If you cannot determine the information, set it to null. Be strict about categorization."""
+If you cannot determine the information, set it to null. The subject line is the strongest signal — if subject mentions 'application' or 'applied' in the context of a job, lean toward application_confirmation even if the body is unclear."""
 
         try:
             response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(

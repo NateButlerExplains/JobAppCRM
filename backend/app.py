@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import threading
 import json
 from datetime import datetime, timedelta
@@ -196,6 +197,212 @@ def init_scheduler():
     update_scheduler_for_schedule(schedule)
     scheduler.start()
     logger.info(f"APScheduler initialized with schedule: {schedule}")
+
+
+# Deterministic email classifier (runs BEFORE Gemini to handle clear-cut cases)
+def _classify_by_rules(subject: str, sender: str, body_excerpt: str):
+    """Classify email using deterministic rules. Returns classification dict or None if no rule matches.
+
+    Returns:
+        Dict with keys: category, confidence, source, company_extracted, job_title_extracted, is_job_related
+        Or None if no rule matches (caller should use Gemini)
+    """
+    subject_lower = subject.lower()
+    sender_lower = sender.lower()
+    body_lower = body_excerpt.lower()
+
+    # ===== APPLICATION CONFIRMATION RULES (highest priority) =====
+
+    # Rule 1: Indeed sender + any Indeed-related subject pattern
+    if "indeedapply@indeed.com" in sender_lower or "no-reply@indeed.com" in sender_lower:
+        # Parse job title from subject after "Indeed Application: " pattern
+        job_title = None
+        match = re.search(r'Indeed Application:\s*(.+?)(?:\s*$|\s*–)', subject)
+        if match:
+            job_title = match.group(1).strip()
+
+        return {
+            "category": "application_confirmation",
+            "confidence": 1.0,
+            "source": "rules",
+            "company_extracted": "Indeed",
+            "job_title_extracted": job_title or "Position from Indeed",
+            "is_job_related": True,
+        }
+
+    # Rule 2: ADP sender (*.hr@adp.com) - parse company from sender prefix
+    if ".hr@adp.com" in sender_lower:
+        # Extract company name from sender (e.g., "InsourceServices" from "InsourceServices.hr@adp.com")
+        company_match = re.search(r'^([^@\.]+)(?:\.hr)?@adp\.com', sender_lower)
+        company_name = None
+        if company_match:
+            # Convert "insourceservices" to "Insource Services"
+            raw = company_match.group(1)
+            company_name = ' '.join(re.findall('[A-Z][a-z]*', raw)) if raw else None
+            if not company_name:
+                # Fallback for single-word companies
+                company_name = raw.capitalize()
+
+        # Parse job title from body ("application for the {Role} position")
+        job_title = None
+        job_match = re.search(r'application for (?:the )?(.+?)(?:\s+position)?[.!]', body_lower)
+        if job_match:
+            job_title = job_match.group(1).strip().title()
+
+        return {
+            "category": "application_confirmation",
+            "confidence": 1.0,
+            "source": "rules",
+            "company_extracted": company_name or "ADP Employer",
+            "job_title_extracted": job_title or "Position via ADP",
+            "is_job_related": True,
+        }
+
+    # Rule 3: LinkedIn job confirmations ("your application was sent to {Company}")
+    if "jobs-noreply@linkedin.com" in sender_lower:
+        # Pattern 1: "your application was sent to {Company}"
+        company_match = re.search(r'your application was sent to\s+(.+?)(?:\s+for|\s+as a|\s*$)', subject_lower, re.IGNORECASE)
+        if company_match:
+            company_name = company_match.group(1).strip().title()
+            return {
+                "category": "application_confirmation",
+                "confidence": 1.0,
+                "source": "rules",
+                "company_extracted": company_name,
+                "job_title_extracted": None,
+                "is_job_related": True,
+            }
+
+        # Pattern 2: "Your application to {Role} at {Company}"
+        app_match = re.search(r'your application to\s+(.+?)\s+at\s+(.+?)$', subject_lower, re.IGNORECASE)
+        if app_match:
+            job_title = app_match.group(1).strip().title()
+            company_name = app_match.group(2).strip().title()
+            return {
+                "category": "application_confirmation",
+                "confidence": 1.0,
+                "source": "rules",
+                "company_extracted": company_name,
+                "job_title_extracted": job_title,
+                "is_job_related": True,
+            }
+
+    # Rule 4: Other HR platforms (Workday, Greenhouse, Lever, etc.)
+    hr_platform_patterns = [
+        r"@workday\.com",
+        r"@greenhouse\.io",
+        r"@lever\.co",
+        r"@smartrecruiters\.com",
+        r"@taleo\.net",
+        r"@icims\.com",
+        r"@myworkdayjobs\.com",
+        r"no\.reply@email\.roberthalf\.com"
+    ]
+    if any(re.search(pattern, sender_lower) for pattern in hr_platform_patterns):
+        # HR platforms always send application confirmations when email is about applications
+        if any(keyword in subject_lower for keyword in ["application", "applied", "received", "submitted"]):
+            return {
+                "category": "application_confirmation",
+                "confidence": 1.0,
+                "source": "rules",
+                "company_extracted": None,
+                "job_title_extracted": None,
+                "is_job_related": True,
+            }
+
+    # Rule 5: Subject line patterns for confirmation
+    confirmation_subject_patterns = [
+        r"Indeed Application:",
+        r"application received",
+        r"application submitted",
+        r"thank you for applying",
+        r"thank you for your application",
+        r"your application.*received",
+    ]
+    if any(re.search(pattern, subject_lower, re.IGNORECASE) for pattern in confirmation_subject_patterns):
+        return {
+            "category": "application_confirmation",
+            "confidence": 0.95,
+            "source": "rules",
+            "company_extracted": None,
+            "job_title_extracted": None,
+            "is_job_related": True,
+        }
+
+    # ===== UNRELATED RULES (return early to skip Gemini) =====
+
+    unrelated_senders = [
+        r"@s\.kohls\.com",
+        r"@adtcontrol\.com",
+        r"@e\.ncl\.com",
+        r"@thepointsguy\.com",
+        r"@redditmail\.com",
+        r"@medium\.com",
+        r"@americanexpress\.com",
+        r"@skool\.com",
+        r"invitations@linkedin\.com",
+        r"messaging-digest-noreply@linkedin\.com",
+    ]
+    if any(re.search(pattern, sender_lower) for pattern in unrelated_senders):
+        return {
+            "category": "unrelated",
+            "confidence": 1.0,
+            "source": "rules",
+            "company_extracted": None,
+            "job_title_extracted": None,
+            "is_job_related": False,
+        }
+
+    unrelated_subject_patterns = [
+        r"new notification since",
+        r"Google Alert",
+        r"sign-in detected",
+        r"weekly digest",
+    ]
+    if any(re.search(pattern, subject, re.IGNORECASE) for pattern in unrelated_subject_patterns):
+        return {
+            "category": "unrelated",
+            "confidence": 1.0,
+            "source": "rules",
+            "company_extracted": None,
+            "job_title_extracted": None,
+            "is_job_related": False,
+        }
+
+    # ===== JOB LEAD RULES =====
+
+    if "noreply@glassdoor.com" in sender_lower and any(w in subject_lower for w in ["jobs", "hiring"]):
+        return {
+            "category": "job_lead",
+            "confidence": 0.95,
+            "source": "rules",
+            "company_extracted": None,
+            "job_title_extracted": None,
+            "is_job_related": True,
+        }
+
+    if "monster@notifications.monster.com" in sender_lower:
+        return {
+            "category": "job_lead",
+            "confidence": 0.95,
+            "source": "rules",
+            "company_extracted": None,
+            "job_title_extracted": None,
+            "is_job_related": True,
+        }
+
+    if "jobalerts-noreply@linkedin.com" in sender_lower:
+        return {
+            "category": "job_lead",
+            "confidence": 0.95,
+            "source": "rules",
+            "company_extracted": None,
+            "job_title_extracted": None,
+            "is_job_related": True,
+        }
+
+    # No rule matched, return None so Gemini will be used
+    return None
 
 
 # API Routes
@@ -566,12 +773,19 @@ def process_unlinked_emails():
                 body_excerpt = email["body_excerpt"] or ""
                 sender = email["sender"] or ""
 
-                # Classify email
-                classification = processor.classifier.classify_email(
-                    subject,
-                    body_excerpt,
-                    sender
-                )
+                # Try deterministic rules first (handles ~70% of emails without API calls)
+                classification = _classify_by_rules(subject, sender, body_excerpt)
+
+                # If no rule matched, use Gemini classifier
+                if classification is None:
+                    classification = processor.classifier.classify_email(
+                        subject,
+                        body_excerpt,
+                        sender
+                    )
+                    logger.debug(f"Email {email_id} classified by Gemini: {classification.get('category')}")
+                else:
+                    logger.debug(f"Email {email_id} classified by rules: {classification.get('category')}")
 
                 # Store classification result
                 db.execute(
@@ -646,8 +860,6 @@ def process_unlinked_emails():
 
                 # Other job-related categories (interview, rejection, etc.) - just mark as processed
                 stats["processed"] += 1
-
-                stats["processed"] += 1
             except Exception as e:
                 logger.error(f"Error processing email {email_id}: {e}")
                 stats["errors"].append(str(e))
@@ -661,6 +873,138 @@ def process_unlinked_emails():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error processing unlinked emails: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/emails/reclassify", methods=["POST"])
+def reclassify_emails():
+    """Re-classify emails that were previously marked as unrelated or job_lead using updated rules.
+
+    This allows recovery of emails that were misclassified before the rule updates.
+    """
+    try:
+        data = request.json or {}
+        limit = data.get("limit", 20)  # Default to 20 emails per request
+        category_filter = data.get("category", "unrelated")  # Which category to reclassify
+
+        # Get emails in the specified category
+        if category_filter == "unrelated":
+            emails_to_reclassify = db.execute(
+                "SELECT * FROM emails WHERE application_id IS NULL AND gemini_classification LIKE '%unrelated%' LIMIT ?",
+                (limit,)
+            ).fetchall()
+        elif category_filter == "job_lead":
+            emails_to_reclassify = db.execute(
+                "SELECT * FROM emails WHERE application_id IS NULL AND gemini_classification LIKE '%job_lead%' LIMIT ?",
+                (limit,)
+            ).fetchall()
+        else:
+            emails_to_reclassify = []
+
+        # Convert to dicts
+        emails_to_reclassify = [dict(row) for row in emails_to_reclassify]
+
+        if not emails_to_reclassify:
+            return jsonify({
+                "message": f"No {category_filter} emails to reclassify",
+                "reclassified": 0,
+                "application_confirmations": 0,
+                "moved_to_leads": 0,
+                "still_unrelated": 0,
+            }), 200
+
+        processor = EmailProcessor(db)
+        stats = {
+            "reclassified": 0,
+            "application_confirmations": 0,
+            "moved_to_leads": 0,
+            "still_unrelated": 0,
+            "errors": [],
+        }
+
+        for email in emails_to_reclassify:
+            try:
+                email_id = email["id"]
+                subject = email["subject"] or ""
+                body_excerpt = email["body_excerpt"] or ""
+                sender = email["sender"] or ""
+
+                # Try deterministic rules first
+                classification = _classify_by_rules(subject, sender, body_excerpt)
+
+                # If no rule matched, use Gemini
+                if classification is None:
+                    classification = processor.classifier.classify_email(
+                        subject,
+                        body_excerpt,
+                        sender
+                    )
+
+                # Update classification in DB
+                db.execute(
+                    "UPDATE emails SET gemini_classification = ? WHERE id = ?",
+                    (json.dumps(classification), email_id)
+                )
+                db.commit()
+
+                new_category = classification.get("category", "unrelated")
+
+                # Track reclassification results
+                if new_category == "application_confirmation":
+                    stats["application_confirmations"] += 1
+                    # Link or create application
+                    applications = Application.get_all(db)
+                    best_match = None
+                    best_score = 0.7
+
+                    for app in applications:
+                        score = processor.linker.semantic_match_email_to_application(
+                            subject, body_excerpt, app["company_name"], app["job_title"]
+                        )
+                        if score > best_score:
+                            best_score = score
+                            best_match = app
+
+                    if best_match:
+                        Email.link_to_application(db, email_id, best_match["id"])
+                        logger.info(f"Reclassified email {email_id}: linked to app {best_match['id']}")
+                    else:
+                        # Create new application from extraction
+                        company_name = classification.get("company_extracted") or "Unknown Company"
+                        job_title = classification.get("job_title_extracted") or "Unknown Position"
+
+                        app_id = Application.create(
+                            db,
+                            company_name=company_name,
+                            job_title=job_title,
+                            date_submitted=datetime.now().strftime("%Y-%m-%d"),
+                            job_url=""
+                        )
+
+                        Email.link_to_application(db, email_id, app_id)
+                        logger.info(f"Reclassified email {email_id}: created new app {app_id}")
+
+                elif new_category == "job_lead":
+                    stats["moved_to_leads"] += 1
+                    logger.info(f"Reclassified email {email_id} as job_lead")
+
+                else:
+                    stats["still_unrelated"] += 1
+                    logger.info(f"Email {email_id} still unrelated after reclassification")
+
+                stats["reclassified"] += 1
+
+            except Exception as e:
+                logger.error(f"Error reclassifying email {email['id']}: {e}")
+                stats["errors"].append(str(e))
+
+        return jsonify({
+            "message": f"Reclassified {stats['reclassified']} emails",
+            **stats
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error reclassifying emails: {e}")
         return jsonify({"error": str(e)}), 500
 
 

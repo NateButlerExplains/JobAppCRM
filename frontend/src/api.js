@@ -40,6 +40,7 @@ export const getNonJobRelatedEmails = () => api.get('/emails/non-job-related')
 export const getJobLeads = () => api.get('/emails/job-leads')
 export const linkEmail = (emailId, appId) => api.patch(`/emails/${emailId}/link`, { app_id: appId })
 export const processUnlinkedEmails = (limit = null) => api.post('/emails/process-unlinked', { limit })
+export const reclassifyEmails = (category = 'unrelated', limit = 20) => api.post('/emails/reclassify', { category, limit })
 
 // Sync Logs
 export const getSyncLogs = (limit = 10) => api.get(`/sync-logs?limit=${limit}`)

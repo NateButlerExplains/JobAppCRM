@@ -1,5 +1,6 @@
 import logging
 import time
+import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
@@ -10,6 +11,32 @@ from gemini_classifier import GeminiClassifier
 from application_linker import ApplicationLinker
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_body(text: str) -> str:
+    """Clean email body for classification: remove tracking junk and normalize whitespace.
+
+    Removes:
+    - Zero-width and invisible Unicode chars (U+200B-U+200F, U+2028-U+202E, U+034F, U+FEFF)
+    - URLs and bracketed URL labels (tracking links add nothing for classification)
+    - Excessive whitespace
+
+    Args:
+        text: Raw email body text
+
+    Returns:
+        Cleaned text suitable for Gemini classification
+    """
+    # Remove zero-width and invisible unicode chars
+    text = re.sub(r'[\u200b-\u200f\u2028\u2029\u202a-\u202e\u034f\ufeff]', '', text)
+    # Remove URLs (tracking links add nothing for classification)
+    text = re.sub(r'https?://\S+', '', text)
+    # Remove bracketed URL labels like [Indeed] or [https://...]
+    text = re.sub(r'\[https?://[^\]]*\]', '', text)
+    text = re.sub(r'\[[A-Z][a-z]+\]\s*', '', text)
+    # Collapse whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 
 class EmailProcessor:
@@ -206,7 +233,7 @@ class EmailProcessor:
                 ms_message_id=email.get("id"),
                 sender=email.get("from", ""),
                 subject=email.get("subject", ""),
-                body_excerpt=email.get("body", "")[:2000],
+                body_excerpt=_clean_body(email.get("body", ""))[:1000],
                 date_received=email.get("receivedDateTime"),
                 email_type="application_confirmation",
                 gemini_classification=classification,
@@ -245,7 +272,7 @@ class EmailProcessor:
             ms_message_id=email.get("id"),
             sender=email.get("from", ""),
             subject=email.get("subject", ""),
-            body_excerpt=email.get("body", "")[:2000],
+            body_excerpt=_clean_body(email.get("body", ""))[:1000],
             date_received=email.get("receivedDateTime"),
             email_type=classification.get("email_type", "other"),
             gemini_classification=classification,
