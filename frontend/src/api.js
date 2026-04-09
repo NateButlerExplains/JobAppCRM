@@ -57,4 +57,12 @@ export const getClassifierStats = () => api.get('/classifier/stats')
 // Gemini Health
 export const getGeminiHealth = () => api.get('/gemini/health')
 
+// Interview Prep
+export const getApplicationPrep = (id) => api.get(`/applications/${id}/prep`)
+export const researchCompany = (id) => api.post(`/applications/${id}/prep/research`)
+export const generateInterviewPrep = (id) => api.post(`/applications/${id}/prep/generate`)
+export const submitQuizAnswer = (id, question, userAnswer) =>
+  api.post(`/applications/${id}/prep/quiz`, { question, user_answer: userAnswer })
+export const getPrepHistory = () => api.get('/prep/history')
+
 export default api
