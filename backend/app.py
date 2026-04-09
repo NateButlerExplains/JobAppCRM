@@ -1154,24 +1154,33 @@ def correct_email_classification(email_id):
                 # Fallback: try to extract from sender domain if still unknown
                 if company_name == "Unknown Company" and email["sender"]:
                     try:
-                        # Extract domain from sender email (e.g., noreply@stellaritgroup.com -> stellaritgroup)
+                        # Extract domain from sender email
                         sender = email["sender"]
                         if "@" in sender:
-                            domain = sender.split("@")[1].split(".")[0]
-                            if domain and domain != "noreply":
-                                # Try to humanize domain (e.g., stellaritgroup -> Stellar IT Group)
-                                company_name = domain.replace("-", " ").title()
+                            domain_part = sender.split("@")[1].split(".")[0]
+                            if domain_part and domain_part != "noreply":
+                                # Humanize domain: replace hyphens with spaces and title case
+                                # e.g., "vishay-precision-group" -> "Vishay Precision Group"
+                                company_name = domain_part.replace("-", " ").title()
                     except Exception:
                         pass
 
                 # Fallback: try to extract from subject line
                 if job_title == "Unknown Position":
                     try:
-                        # Look for "position of X" or "application for X" patterns
-                        import re
-                        match = re.search(r'(?:position of|application for|role of|applying to)\s+([^,\.]+)', subject, re.IGNORECASE)
+                        # Look for job title patterns in subject
+                        # Patterns: "Thanks for applying for X", "application for X", "position of X", etc.
+                        match = re.search(
+                            r'(?:Thanks for applying for|application for|position of|role of|applying to|for the position of)\s+([^,\n]+)',
+                            subject,
+                            re.IGNORECASE
+                        )
                         if match:
-                            job_title = match.group(1).strip().title()
+                            extracted_title = match.group(1).strip()
+                            # Clean up common suffixes
+                            extracted_title = re.sub(r'\s*at\s+.*$', '', extracted_title, flags=re.IGNORECASE).strip()
+                            if extracted_title and len(extracted_title) < 100:
+                                job_title = extracted_title
                     except Exception:
                         pass
 

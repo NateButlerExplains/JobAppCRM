@@ -172,15 +172,24 @@ Always respond ONLY with valid JSON, no markdown formatting.
 
 Sender: {sender}
 
-EXTRACTION RULES:
-- Company name: Look in subject, sender domain, or body for company name
-- Job title: Look for "position of", "role of", "applying to", "application for", or job title mentions
-- If you find partial info, fill it in - don't leave null unless truly impossible
+EXTRACTION RULES FOR COMPANY NAME:
+- Look for full company names in subject, body, or sender domain (not just domain)
+- Patterns: "at [Company Name]", "for [Company Name]", "[Company Name]'s", "behalf of [Company Name]"
+- If sender has multi-word domain (e.g., vishay-precision.com or vishay-precision-group.com), extract as "Vishay Precision" or "Vishay Precision Group"
+- Prefer full company name from body/subject over domain abbreviation
+- Include subsidiary/division names if present (e.g., "Acme Corp's Engineering Division")
+
+EXTRACTION RULES FOR JOB TITLE:
+- Look for job titles in subject line (often formatted as "[JobTitle] - [Company]" or "Thanks for applying for [JobTitle]")
+- Patterns: "applying for [title]", "position of [title]", "role of [title]", "as [title]"
+- Common job titles: Engineer, Manager, Developer, Analyst, Coordinator, Specialist, etc.
+- Extract the full job title (e.g., "Senior Software Engineer", not just "Engineer")
+- If multiple roles mentioned, pick the most specific one from the subject line
 
 Respond with ONLY this JSON structure (no markdown, no extra text):
 {{
-  "company_name": "extracted company name or null",
-  "job_title": "extracted job title or null",
+  "company_name": "full company name or null (prefer multi-word names)",
+  "job_title": "full job title or null",
   "company_domain": "domain from sender email or null"
 }}"""
 
