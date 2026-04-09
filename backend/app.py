@@ -208,10 +208,26 @@ VALID_REASON_CODES = {
         "LINKEDIN_PATTERN": "LinkedIn application confirmation pattern not matched",
         "BODY_TOO_VAGUE": "Body content was too sparse or junk-filled for Gemini to parse correctly",
     },
+    "rejection": {
+        "EXPLICIT_DENIAL": "Email explicitly states application was denied or rejected",
+        "MOVE_FORWARD_LANGUAGE": "Contains 'move forward with other candidates' or similar",
+        "CLEAR_REJECTION_SUBJECT": "Subject line contains 'rejection', 'denied', or 'not selected'",
+    },
+    "more_info_needed": {
+        "REQUESTED_INFO": "Email asks for additional information or documents",
+        "FOLLOW_UP_NEEDED": "Email indicates need to follow up with more details",
+        "ASSESSMENT_PENDING": "Email indicates assessment or interview stage needs more from candidate",
+    },
     "job_lead": {
         "JOB_RECOMMENDATIONS": "Email contains job recommendations sent to me",
         "JOB_ALERT": "Job alert from a job board I subscribed to",
         "RECRUITER_OUTREACH": "Recruiter outreach about job opportunities",
+    },
+    "unrelated": {
+        "CONFIRMED_SPAM": "Spam or promotional email with no job relevance",
+        "CONFIRMED_NOTIFICATION": "System notification unrelated to jobs",
+        "CONFIRMED_PERSONAL": "Personal email with no job relevance",
+        "WRONG_INBOX": "Misfiled / not job-related",
     }
 }
 
@@ -553,14 +569,16 @@ def get_application(app_id):
 
 @app.route("/api/applications/<int:app_id>", methods=["PATCH"])
 def update_application(app_id):
-    """Update an application."""
+    """Update an application (supports company_name, job_title, job_url, notes, salary_min, salary_max, status, company_domain)."""
     try:
         data = request.json or {}
 
-        # Update status if provided
+        # Validate status if provided
         if "status" in data and data["status"]:
             validate_status(data["status"])
-            Application.update_status(db, app_id, data["status"])
+
+        # Use the generic update method which handles all whitelisted fields
+        Application.update(db, app_id, data)
 
         app = Application.get_by_id(db, app_id)
         if not app:
@@ -700,6 +718,7 @@ def get_non_job_related_emails():
             SELECT * FROM emails
             WHERE gemini_classification LIKE '%unrelated%'
             AND application_id IS NULL
+            AND (trashed IS NULL OR trashed = 0)
             ORDER BY date_received DESC
         """)
         emails = [dict(row) for row in cursor.fetchall()]
@@ -1098,13 +1117,19 @@ def correct_email_classification(email_id):
             best_match = None
             best_score = 0.7
 
-            for application in applications:
-                score = processor.linker.semantic_match_email_to_application(
-                    subject, body_excerpt, application["company_name"], application["job_title"]
-                )
-                if score > best_score:
-                    best_score = score
-                    best_match = application
+            # Use Gemini semantic matching to find best application
+            match_result = processor.classifier.semantic_match_email_to_applications(
+                subject, body_excerpt, email["sender"] or "", applications
+            )
+
+            # If matches found, pick the highest confidence one
+            if match_result.get("matched_app_ids"):
+                matched_id = match_result["matched_app_ids"][0]
+                for app in applications:
+                    if app["id"] == matched_id:
+                        best_match = app
+                        best_score = match_result.get("match_confidence", 0.8)
+                        break
 
             if best_match:
                 Email.link_to_application(db, email_id, best_match["id"])
@@ -1113,15 +1138,42 @@ def correct_email_classification(email_id):
                 logger.info(f"Corrected email {email_id} linked to existing app {best_match['id']}")
             else:
                 # Attempt extraction with Gemini before creating Unknown Company
+                company_name = "Unknown Company"
+                job_title = "Unknown Position"
+
                 try:
                     extraction = processor.classifier.extract_application_info(
                         subject, body_excerpt, email["sender"] or ""
                     )
-                    company_name = (extraction or {}).get("company_name") or "Unknown Company"
-                    job_title = (extraction or {}).get("job_title") or "Unknown Position"
-                except Exception:
-                    company_name = "Unknown Company"
-                    job_title = "Unknown Position"
+                    if extraction:
+                        company_name = extraction.get("company_name") or company_name
+                        job_title = extraction.get("job_title") or job_title
+                except Exception as e:
+                    logger.warning(f"Gemini extraction failed: {e}, using fallback")
+
+                # Fallback: try to extract from sender domain if still unknown
+                if company_name == "Unknown Company" and email["sender"]:
+                    try:
+                        # Extract domain from sender email (e.g., noreply@stellaritgroup.com -> stellaritgroup)
+                        sender = email["sender"]
+                        if "@" in sender:
+                            domain = sender.split("@")[1].split(".")[0]
+                            if domain and domain != "noreply":
+                                # Try to humanize domain (e.g., stellaritgroup -> Stellar IT Group)
+                                company_name = domain.replace("-", " ").title()
+                    except Exception:
+                        pass
+
+                # Fallback: try to extract from subject line
+                if job_title == "Unknown Position":
+                    try:
+                        # Look for "position of X" or "application for X" patterns
+                        import re
+                        match = re.search(r'(?:position of|application for|role of|applying to)\s+([^,\.]+)', subject, re.IGNORECASE)
+                        if match:
+                            job_title = match.group(1).strip().title()
+                    except Exception:
+                        pass
 
                 new_app_id = Application.create(
                     db,
@@ -1157,6 +1209,46 @@ def correct_email_classification(email_id):
 
     except Exception as e:
         logger.error(f"Error correcting email classification: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/emails/<int:email_id>", methods=["DELETE"])
+def trash_email(email_id):
+    """Soft-delete (trash) an unrelated email and record as confirmed-unrelated training signal."""
+    try:
+        data = request.json or {}
+        reason_code = data.get("reason_code", "CONFIRMED_SPAM")
+
+        email = Email.get_by_id(db, email_id)
+        if not email:
+            return jsonify({"error": "Email not found"}), 404
+
+        # Record as training feedback: confirmed unrelated
+        reason_label = VALID_REASON_CODES["unrelated"].get(reason_code, "Confirmed unrelated by user")
+        original_category = "unrelated"
+        if email.get("gemini_classification"):
+            try:
+                gc = json.loads(email["gemini_classification"])
+                original_category = gc.get("category", "unrelated")
+            except Exception:
+                pass
+
+        ClassificationFeedback.create(
+            db,
+            email_id=email_id,
+            original_category=original_category,
+            corrected_category="unrelated",
+            reason_code=reason_code,
+            reason_label=reason_label,
+        )
+
+        # Soft-delete the email
+        Email.soft_delete(db, email_id)
+
+        return jsonify({"email_id": email_id, "message": "Email trashed and used as training signal"}), 200
+
+    except Exception as e:
+        logger.error(f"Error trashing email: {e}")
         return jsonify({"error": str(e)}), 500
 
 

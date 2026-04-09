@@ -53,6 +53,22 @@ class GeminiClassifier:
             logger.error(f"Failed to parse JSON: {text[:200]}")
             return None
 
+    def _decode_safelinks(self, text: str) -> str:
+        """Replace Microsoft SafeLinks URLs with their original destination URLs."""
+        from urllib.parse import urlparse, parse_qs, unquote
+
+        def _replace(m):
+            try:
+                url = m.group(0)
+                parsed = urlparse(url)
+                params = parse_qs(parsed.query)
+                original = params.get('url', [url])[0]
+                return unquote(original)
+            except Exception:
+                return m.group(0)
+
+        return re.sub(r'https?://[^\s]*safelinks\.protection\.outlook\.com[^\s]*', _replace, text)
+
     def _clean_body_for_classification(self, text: str) -> str:
         """Clean email body for Gemini classification: remove tracking junk and normalize whitespace.
 
@@ -69,6 +85,8 @@ class GeminiClassifier:
         """
         # Remove zero-width and invisible unicode chars
         text = re.sub(r'[\u200b-\u200f\u2028\u2029\u202a-\u202e\u034f\ufeff]', '', text)
+        # Decode SafeLinks before stripping — preserve destination URL text
+        text = self._decode_safelinks(text)
         # Remove URLs (tracking links add nothing for classification)
         text = re.sub(r'https?://\S+', '', text)
         # Remove bracketed URL labels like [Indeed] or [https://...]
@@ -144,20 +162,27 @@ If you cannot determine the information, set it to null. The subject line is the
         """Extract company and job title from an application confirmation email."""
         gemini_rate_limiter.wait()
 
-        prompt = f"""Extract company name and job title from this application confirmation email. Respond ONLY with JSON.
+        # Combine subject and body for better extraction
+        combined_text = f"Subject: {subject}\n\nBody: {body[:2000]}"
 
-Subject: {subject}
-Body: {body[:2000]}
+        prompt = f"""Extract company name and job title from this application confirmation email.
+Always respond ONLY with valid JSON, no markdown formatting.
+
+{combined_text}
+
 Sender: {sender}
 
-Respond with:
-{{
-  "company_name": "string",
-  "job_title": "string",
-  "company_domain": "domain extracted from sender email or null"
-}}
+EXTRACTION RULES:
+- Company name: Look in subject, sender domain, or body for company name
+- Job title: Look for "position of", "role of", "applying to", "application for", or job title mentions
+- If you find partial info, fill it in - don't leave null unless truly impossible
 
-If you cannot extract the information, set to null. Be specific and accurate."""
+Respond with ONLY this JSON structure (no markdown, no extra text):
+{{
+  "company_name": "extracted company name or null",
+  "job_title": "extracted job title or null",
+  "company_domain": "domain from sender email or null"
+}}"""
 
         try:
             response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
@@ -166,8 +191,10 @@ If you cannot extract the information, set to null. Be specific and accurate."""
             ))
 
             result = self._extract_json(response.text)
-            if result and result.get("company_name"):
+            if result and (result.get("company_name") or result.get("job_title")):
+                logger.info(f"Extracted: company={result.get('company_name')}, job={result.get('job_title')}")
                 return result
+            logger.warning(f"Extraction returned no data: {result}")
             return None
 
         except Exception as e:

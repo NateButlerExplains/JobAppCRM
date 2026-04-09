@@ -7,6 +7,7 @@ import { UnlinkedEmailsTray } from './UnlinkedEmailsTray'
 import { UnrelatedEmails } from './UnrelatedEmails'
 import { JobLeads } from './JobLeads'
 import { Settings } from './Settings'
+import { ClassifierGauge } from './ClassifierGauge'
 import './App.css'
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
   const [statusFilter, setStatusFilter] = useState('')
   const [emailTypeFilter, setEmailTypeFilter] = useState('')
   const [filterOptions, setFilterOptions] = useState({ statuses: [], email_types: [] })
+  const [gaugeRefreshTrigger, setGaugeRefreshTrigger] = useState(0)
 
   useEffect(() => {
     loadData()
@@ -125,7 +127,7 @@ function App() {
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-4 border-t pt-3">
+          <div className="flex gap-4 border-t pt-3 items-center">
             <button
               onClick={() => setCurrentPage('dashboard')}
               className={`px-3 py-2 rounded font-medium transition-colors ${
@@ -146,6 +148,9 @@ function App() {
             >
               Settings
             </button>
+            <div className="ml-auto">
+              <ClassifierGauge refreshTrigger={gaugeRefreshTrigger} />
+            </div>
           </div>
         </div>
       </header>
@@ -278,6 +283,9 @@ function App() {
             }}
             onReclassified={() => {
               loadData()
+            }}
+            onGaugeRefresh={() => {
+              setGaugeRefreshTrigger(prev => prev + 1)
             }}
           />
         )}

@@ -43,6 +43,8 @@ export const processUnlinkedEmails = (limit = null) => api.post('/emails/process
 export const reclassifyEmails = (category = 'unrelated', limit = 20) => api.post('/emails/reclassify', { category, limit })
 export const correctEmailClassification = (emailId, correctedCategory, reasonCode) =>
   api.post(`/emails/${emailId}/correct`, { corrected_category: correctedCategory, reason_code: reasonCode })
+export const trashEmail = (emailId, reasonCode = 'CONFIRMED_SPAM') =>
+  api.delete(`/emails/${emailId}`, { data: { reason_code: reasonCode } })
 
 // Sync Logs
 export const getSyncLogs = (limit = 10) => api.get(`/sync-logs?limit=${limit}`)

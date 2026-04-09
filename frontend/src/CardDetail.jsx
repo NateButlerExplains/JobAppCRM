@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getApplicationEmails, getApplicationInteractions, createInteraction } from './api'
+import { getApplicationEmails, getApplicationInteractions, createInteraction, updateApplication } from './api'
 import { AddInteraction } from './AddInteraction'
 
 export function CardDetail({ application, isOpen, onClose }) {
@@ -9,6 +9,9 @@ export function CardDetail({ application, isOpen, onClose }) {
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('emails')
   const [showAddInteraction, setShowAddInteraction] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedFields, setEditedFields] = useState({})
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (isOpen && application) {
@@ -46,6 +49,34 @@ export function CardDetail({ application, isOpen, onClose }) {
     }
   }
 
+  const handleEditChange = (field, value) => {
+    setEditedFields(prev => ({
+      ...prev,
+      [field]: value === '' ? null : value
+    }))
+  }
+
+  const handleSaveEdits = async () => {
+    setSaving(true)
+    try {
+      await updateApplication(application.id, editedFields)
+      // Update local application state by calling onClose which will trigger parent reload
+      setIsEditMode(false)
+      setEditedFields({})
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Failed to save changes')
+      console.error('Error saving changes:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false)
+    setEditedFields({})
+  }
+
   if (!isOpen || !application) return null
 
   return (
@@ -63,25 +94,75 @@ export function CardDetail({ application, isOpen, onClose }) {
       >
         {/* Header */}
         <div className="sticky top-0 bg-background border-b p-4">
-          <div className="flex justify-between items-start">
+          <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
-              <h2 className="text-2xl font-bold text-foreground">
-                {application.company_name}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {application.job_title}
-              </p>
+              {isEditMode ? (
+                <>
+                  <input
+                    type="text"
+                    value={editedFields.company_name ?? application.company_name}
+                    onChange={(e) => handleEditChange('company_name', e.target.value)}
+                    className="w-full text-2xl font-bold bg-muted border rounded px-2 py-1 mb-2"
+                    placeholder="Company name"
+                  />
+                  <input
+                    type="text"
+                    value={editedFields.job_title ?? application.job_title}
+                    onChange={(e) => handleEditChange('job_title', e.target.value)}
+                    className="w-full text-sm bg-muted border rounded px-2 py-1"
+                    placeholder="Job title"
+                  />
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold text-foreground">
+                    {application.company_name}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {application.job_title}
+                  </p>
+                </>
+              )}
             </div>
-            <button
-              onClick={onClose}
-              className="text-muted-foreground hover:text-foreground p-2"
-            >
-              ✕
-            </button>
+            <div className="flex gap-2">
+              {isEditMode ? (
+                <>
+                  <button
+                    onClick={handleSaveEdits}
+                    disabled={saving}
+                    className="text-sm px-3 py-1 bg-primary text-primary-foreground rounded hover:opacity-90 disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="text-sm px-3 py-1 bg-muted text-muted-foreground rounded hover:bg-muted/80"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setIsEditMode(true)}
+                    className="text-muted-foreground hover:text-foreground p-2"
+                    title="Edit application details"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="text-muted-foreground hover:text-foreground p-2"
+                  >
+                    ✕
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Metadata */}
-          <div className="mt-4 space-y-2 text-sm">
+          <div className="space-y-3 text-sm">
             <div>
               <span className="text-muted-foreground">Applied: </span>
               <span className="text-foreground">
@@ -94,6 +175,83 @@ export function CardDetail({ application, isOpen, onClose }) {
                 {application.status}
               </span>
             </div>
+
+            {/* Edit Mode: Additional Editable Fields */}
+            {isEditMode && (
+              <div className="mt-4 space-y-3 pt-4 border-t">
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Job URL</label>
+                  <input
+                    type="url"
+                    value={editedFields.job_url ?? application.job_url ?? ''}
+                    onChange={(e) => handleEditChange('job_url', e.target.value)}
+                    placeholder="https://..."
+                    className="w-full text-sm bg-muted border rounded px-2 py-1"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Salary Range</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={editedFields.salary_min ?? application.salary_min ?? ''}
+                      onChange={(e) => handleEditChange('salary_min', e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="Min"
+                      className="w-1/2 text-sm bg-muted border rounded px-2 py-1"
+                    />
+                    <input
+                      type="number"
+                      value={editedFields.salary_max ?? application.salary_max ?? ''}
+                      onChange={(e) => handleEditChange('salary_max', e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="Max"
+                      className="w-1/2 text-sm bg-muted border rounded px-2 py-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Notes</label>
+                  <textarea
+                    value={editedFields.notes ?? application.notes ?? ''}
+                    onChange={(e) => handleEditChange('notes', e.target.value)}
+                    placeholder="Add notes about this application..."
+                    className="w-full text-sm bg-muted border rounded px-2 py-1 h-20 resize-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* View Mode: Display Salary and Notes if they exist */}
+            {!isEditMode && (
+              <>
+                {(application.salary_min || application.salary_max) && (
+                  <div>
+                    <span className="text-muted-foreground">Salary Range: </span>
+                    <span className="text-foreground">
+                      ${application.salary_min?.toLocaleString()} – ${application.salary_max?.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {application.job_url && (
+                  <div>
+                    <span className="text-muted-foreground">Job URL: </span>
+                    <a
+                      href={application.job_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm"
+                    >
+                      View Posting
+                    </a>
+                  </div>
+                )}
+                {application.notes && (
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Notes: </span>
+                    <p className="text-foreground text-sm whitespace-pre-wrap">{application.notes}</p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

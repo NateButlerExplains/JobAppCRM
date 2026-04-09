@@ -143,6 +143,27 @@ class Database:
         )
         """)
 
+        # Safe migrations — add new columns if they don't exist
+        try:
+            cursor.execute("ALTER TABLE emails ADD COLUMN trashed INTEGER DEFAULT 0")
+        except Exception:
+            pass  # Column already exists
+
+        try:
+            cursor.execute("ALTER TABLE applications ADD COLUMN notes TEXT")
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE applications ADD COLUMN salary_min INTEGER")
+        except Exception:
+            pass
+
+        try:
+            cursor.execute("ALTER TABLE applications ADD COLUMN salary_max INTEGER")
+        except Exception:
+            pass
+
         self.connection.commit()
 
     def _sync_logs_allows_cancelled(self) -> bool:
@@ -246,6 +267,27 @@ class Application:
         db.commit()
 
     @staticmethod
+    def update(db: Database, app_id: int, fields: Dict[str, Any]):
+        """Update application with whitelisted fields."""
+        ALLOWED = {'company_name', 'job_title', 'job_url', 'notes', 'salary_min', 'salary_max', 'status', 'company_domain'}
+
+        # Filter to allowed fields only
+        updates = {k: v for k, v in fields.items() if k in ALLOWED}
+        if not updates:
+            return
+
+        # Build dynamic SET clause
+        set_clause = ', '.join([f"{k} = ?" for k in updates.keys()])
+        values = list(updates.values())
+        values.append(app_id)
+
+        db.execute(
+            f"UPDATE applications SET {set_clause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            tuple(values)
+        )
+        db.commit()
+
+    @staticmethod
     def delete(db: Database, app_id: int):
         """Delete an application."""
         db.execute("DELETE FROM applications WHERE id = ?", (app_id,))
@@ -333,6 +375,15 @@ class Email:
             (ms_message_id,)
         )
         return cursor.fetchone() is not None
+
+    @staticmethod
+    def soft_delete(db: Database, email_id: int):
+        """Soft-delete an email (mark as trashed)."""
+        db.execute(
+            "UPDATE emails SET trashed = 1 WHERE id = ?",
+            (email_id,)
+        )
+        db.commit()
 
 
 class Interaction:
@@ -563,16 +614,30 @@ class ClassificationFeedback:
 
     @staticmethod
     def get_stats(db: Database) -> Dict[str, Any]:
-        """Return accuracy and training data metrics for the classifier gauge."""
-        total_classified = db.execute(
-            "SELECT COUNT(*) as cnt FROM emails WHERE gemini_classification IS NOT NULL"
+        """Return accuracy and training data metrics for the classifier gauge.
+
+        Uses a 30-day window for accuracy so the gauge fluctuates meaningfully
+        (not all-time count which barely moves with 2000+ emails).
+        Training examples count is all-time total.
+        """
+        # 30-day window for accuracy (recent classifications only)
+        recent_classified = db.execute(
+            """SELECT COUNT(*) as cnt FROM emails
+               WHERE gemini_classification IS NOT NULL
+               AND date_received >= datetime('now', '-30 days')"""
         ).fetchone()["cnt"]
 
-        total_corrected = db.execute(
+        recent_corrected = db.execute(
+            """SELECT COUNT(*) as cnt FROM classification_feedback
+               WHERE created_at >= datetime('now', '-30 days')"""
+        ).fetchone()["cnt"]
+
+        # All-time training examples count
+        total_training_examples = db.execute(
             "SELECT COUNT(*) as cnt FROM classification_feedback"
         ).fetchone()["cnt"]
 
-        # Count corrections by target category
+        # Count corrections by target category (all-time)
         by_target_rows = db.execute(
             """SELECT corrected_category, COUNT(*) as cnt
                FROM classification_feedback
@@ -580,20 +645,19 @@ class ClassificationFeedback:
         ).fetchall()
         by_target = {row["corrected_category"]: row["cnt"] for row in by_target_rows}
 
-        # Calculate accuracy: (total_classified - total_corrected) / total_classified * 100
-        # Honest signal: drops when corrections are found
-        if total_classified > 0:
+        # Calculate accuracy using 30-day window so gauge fluctuates meaningfully
+        if recent_classified > 0:
             accuracy_score = round(
-                ((total_classified - total_corrected) / total_classified) * 100,
+                ((recent_classified - recent_corrected) / recent_classified) * 100,
                 1
             )
         else:
             accuracy_score = 100.0
 
         return {
-            "total_classified": total_classified,
-            "total_corrected": total_corrected,
-            "training_examples": total_corrected,
+            "total_classified": recent_classified,  # 30-day window
+            "total_corrected": recent_corrected,  # 30-day window
+            "training_examples": total_training_examples,  # all-time
             "accuracy_score": accuracy_score,
             "by_target": by_target,
         }

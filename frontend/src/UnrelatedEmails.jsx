@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { getNonJobRelatedEmails, reclassifyEmails, correctEmailClassification } from './api'
-import { ClassifierGauge } from './ClassifierGauge'
+import { getNonJobRelatedEmails, reclassifyEmails, correctEmailClassification, trashEmail } from './api'
 
 // Predefined reason codes for user corrections
 const REASON_CODES = {
@@ -12,6 +11,16 @@ const REASON_CODES = {
     { code: 'LINKEDIN_PATTERN', label: "LinkedIn confirmation pattern not matched" },
     { code: 'BODY_TOO_VAGUE', label: "Body was too sparse or junk-filled for Gemini" },
   ],
+  rejection: [
+    { code: 'EXPLICIT_DENIAL', label: "Email explicitly states application was denied or rejected" },
+    { code: 'MOVE_FORWARD_LANGUAGE', label: "Contains 'move forward with other candidates' or similar" },
+    { code: 'CLEAR_REJECTION_SUBJECT', label: "Subject line contains 'rejection', 'denied', or 'not selected'" },
+  ],
+  more_info_needed: [
+    { code: 'REQUESTED_INFO', label: "Email asks for additional information or documents" },
+    { code: 'FOLLOW_UP_NEEDED', label: "Email indicates need to follow up with more details" },
+    { code: 'ASSESSMENT_PENDING', label: "Email indicates assessment or interview stage needs more from candidate" },
+  ],
   job_lead: [
     { code: 'JOB_RECOMMENDATIONS', label: "Contains job recommendations sent to me" },
     { code: 'JOB_ALERT', label: "Job alert from a subscribed job board" },
@@ -19,7 +28,7 @@ const REASON_CODES = {
   ]
 }
 
-export function UnrelatedEmails({ onError, onReclassified }) {
+export function UnrelatedEmails({ onError, onReclassified, onGaugeRefresh }) {
   const [isOpen, setIsOpen] = useState(false)
   const [emails, setEmails] = useState([])
   const [loading, setLoading] = useState(false)
@@ -31,7 +40,7 @@ export function UnrelatedEmails({ onError, onReclassified }) {
   const [pendingCategory, setPendingCategory] = useState(null)
   const [selectedReason, setSelectedReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [gaugeRefreshTrigger, setGaugeRefreshTrigger] = useState(0)
+  const [trashing, setTrashing] = useState(null)
 
   // Load non-job-related emails when component mounts
   useEffect(() => {
@@ -92,7 +101,7 @@ export function UnrelatedEmails({ onError, onReclassified }) {
       setPendingCategory(null)
       setSelectedReason('')
       // Trigger gauge refresh and App data reload
-      setGaugeRefreshTrigger(prev => prev + 1)
+      if (onGaugeRefresh) onGaugeRefresh()
       if (onReclassified) {
         onReclassified()
       }
@@ -103,6 +112,22 @@ export function UnrelatedEmails({ onError, onReclassified }) {
       console.error('Error submitting correction:', err)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleTrash = async (emailId) => {
+    setTrashing(emailId)
+    try {
+      await trashEmail(emailId)
+      setEmails(prev => prev.filter(e => e.id !== emailId))
+      if (onGaugeRefresh) onGaugeRefresh()
+      if (onReclassified) onReclassified()
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || 'Failed to trash email'
+      setError(errorMsg)
+      console.error('Error trashing email:', err)
+    } finally {
+      setTrashing(null)
     }
   }
 
@@ -119,7 +144,6 @@ export function UnrelatedEmails({ onError, onReclassified }) {
             <Badge variant="outline" className="bg-gray-100 border-gray-300 text-gray-900">
               {emails.length}
             </Badge>
-            <ClassifierGauge refreshTrigger={gaugeRefreshTrigger} />
           </div>
           <span className="text-muted-foreground text-sm">
             {isOpen ? '▼' : '▶'}
@@ -200,26 +224,56 @@ export function UnrelatedEmails({ onError, onReclassified }) {
                 )}
 
                 {/* Per-card correction buttons */}
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2 items-center justify-between">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        setCorrectingEmailId(email.id)
+                        setPendingCategory('application_confirmation')
+                        setSelectedReason('')
+                      }}
+                      className="px-3 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-800 border border-green-300 rounded font-medium transition-colors"
+                    >
+                      → Move to Submitted
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCorrectingEmailId(email.id)
+                        setPendingCategory('rejection')
+                        setSelectedReason('')
+                      }}
+                      className="px-3 py-1 text-xs bg-red-100 hover:bg-red-200 text-red-800 border border-red-300 rounded font-medium transition-colors"
+                    >
+                      → Move to Denied
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCorrectingEmailId(email.id)
+                        setPendingCategory('more_info_needed')
+                        setSelectedReason('')
+                      }}
+                      className="px-3 py-1 text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border border-yellow-300 rounded font-medium transition-colors"
+                    >
+                      → Move to More Info
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCorrectingEmailId(email.id)
+                        setPendingCategory('job_lead')
+                        setSelectedReason('')
+                      }}
+                      className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 rounded font-medium transition-colors"
+                    >
+                      → Move to Job Leads
+                    </button>
+                  </div>
                   <button
-                    onClick={() => {
-                      setCorrectingEmailId(email.id)
-                      setPendingCategory('application_confirmation')
-                      setSelectedReason('')
-                    }}
-                    className="px-3 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-800 border border-green-300 rounded font-medium transition-colors"
+                    onClick={() => handleTrash(email.id)}
+                    disabled={trashing === email.id}
+                    className="px-2 py-1 text-xs text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Trash — confirms it's unrelated and trains Gemini"
                   >
-                    → Move to Submitted
-                  </button>
-                  <button
-                    onClick={() => {
-                      setCorrectingEmailId(email.id)
-                      setPendingCategory('job_lead')
-                      setSelectedReason('')
-                    }}
-                    className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 rounded font-medium transition-colors"
-                  >
-                    → Move to Job Leads
+                    {trashing === email.id ? '...' : '🗑 Trash'}
                   </button>
                 </div>
 
