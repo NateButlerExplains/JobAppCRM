@@ -1,8 +1,16 @@
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-export function ApplicationCard({ application, hasSuggestion, onClick }) {
+export function ApplicationCard({ application, hasSuggestion, onClick, onPrepClick }) {
   const hasPendingSuggestion = hasSuggestion === true
+  const hasJobUrl = !!application.job_url
+
+  const handlePrepClick = (e) => {
+    e.stopPropagation()
+    if (onPrepClick) {
+      onPrepClick(application)
+    }
+  }
 
   return (
     <Card
@@ -31,6 +39,18 @@ export function ApplicationCard({ application, hasSuggestion, onClick }) {
             <Badge variant="default" className="bg-amber-600 hover:bg-amber-700">
               Suggestion Pending
             </Badge>
+          </div>
+        )}
+
+        {/* Prep Button - Only show when job_url is set */}
+        {hasJobUrl && (
+          <div className="pt-2">
+            <button
+              onClick={handlePrepClick}
+              className="w-full px-3 py-2 text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-800 rounded transition-colors"
+            >
+              Prep → Interview Readiness
+            </button>
           </div>
         )}
       </div>

@@ -28,7 +28,7 @@ const COLUMNS = [
 ]
 
 // Draggable card wrapper
-function SortableCard({ id, application, hasSuggestion, onClick }) {
+function SortableCard({ id, application, hasSuggestion, onClick, onPrepClick }) {
   const {
     attributes,
     listeners,
@@ -56,13 +56,14 @@ function SortableCard({ id, application, hasSuggestion, onClick }) {
         application={application}
         hasSuggestion={hasSuggestion}
         onClick={onClick}
+        onPrepClick={onPrepClick}
       />
     </div>
   )
 }
 
 // Column container
-function KanbanColumn({ column, items, suggestions, onCardClick }) {
+function KanbanColumn({ column, items, suggestions, onCardClick, onPrepClick }) {
   const { setNodeRef } = useSortable({
     id: column.id,
     data: {
@@ -88,6 +89,7 @@ function KanbanColumn({ column, items, suggestions, onCardClick }) {
               application={app}
               hasSuggestion={suggestionsMap.has(app.id)}
               onClick={() => onCardClick(app)}
+              onPrepClick={onPrepClick}
             />
           ))}
         </SortableContext>
@@ -101,7 +103,7 @@ function KanbanColumn({ column, items, suggestions, onCardClick }) {
   )
 }
 
-export function KanbanBoard({ applications, suggestions, onCardClick, onApplicationsChange }) {
+export function KanbanBoard({ applications, suggestions, onCardClick, onApplicationsChange, onPrepClick }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -199,6 +201,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
               items={items[column.id] || []}
               suggestions={suggestions}
               onCardClick={onCardClick}
+              onPrepClick={onPrepClick}
             />
           ))}
         </div>
