@@ -10,7 +10,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from config import Config, logger
-from models import Database, Application, Email, StageSuggestion, SyncLog, ClassificationFeedback
+from models import Database, Application, Email, StageSuggestion, SyncLog, ClassificationFeedback, InterviewPrep
 from email_processor import EmailProcessor
 
 # Configure logging
@@ -1402,6 +1402,176 @@ def set_sync_schedule():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error setting sync schedule: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/applications/<int:app_id>/prep/research", methods=["POST"])
+def research_company_prep(app_id):
+    """Research a company for interview prep."""
+    try:
+        # Fetch application
+        app = Application.get_by_id(db, app_id)
+        if not app:
+            return jsonify({"error": "Application not found"}), 404
+
+        # Get or create interview prep
+        prep = InterviewPrep.get_or_create(db, app_id)
+
+        # Call Gemini to research company
+        processor = EmailProcessor(db)
+        research = processor.classifier.research_company(
+            company_name=app["company_name"],
+            job_title=app["job_title"],
+            job_url=app.get("job_url")
+        )
+
+        # Save research to prep
+        InterviewPrep.update(db, prep["id"], {"company_research": json.dumps(research)})
+
+        # Fetch updated prep
+        updated_prep = InterviewPrep.get_by_id(db, prep["id"])
+        return jsonify(updated_prep), 200
+
+    except Exception as e:
+        logger.error(f"Error researching company: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/applications/<int:app_id>/prep/generate", methods=["POST"])
+def generate_interview_questions(app_id):
+    """Generate interview questions and prep materials."""
+    try:
+        # Fetch application
+        app = Application.get_by_id(db, app_id)
+        if not app:
+            return jsonify({"error": "Application not found"}), 404
+
+        # Get prep (must exist with research done)
+        prep = InterviewPrep.get_by_application(db, app_id)
+        if not prep or not prep.get("company_research"):
+            return jsonify({"error": "Company research must be completed first"}), 400
+
+        # Parse company research
+        company_research = {}
+        if prep.get("company_research"):
+            try:
+                company_research = json.loads(prep["company_research"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Call Gemini to generate questions
+        processor = EmailProcessor(db)
+        questions = processor.classifier.generate_interview_prep(
+            company_name=app["company_name"],
+            job_title=app["job_title"],
+            company_research=company_research
+        )
+
+        # Save to prep
+        InterviewPrep.update(db, prep["id"], {
+            "interview_questions": json.dumps(questions.get("interview_questions", [])),
+            "questions_to_ask": json.dumps(questions.get("questions_to_ask", []))
+        })
+
+        # Fetch updated prep
+        updated_prep = InterviewPrep.get_by_id(db, prep["id"])
+        return jsonify(updated_prep), 200
+
+    except Exception as e:
+        logger.error(f"Error generating interview questions: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/applications/<int:app_id>/prep/quiz", methods=["POST"])
+def submit_quiz_answer(app_id):
+    """Submit a quiz answer and get scoring/feedback."""
+    try:
+        data = request.json or {}
+        question = data.get("question")
+        user_answer = data.get("user_answer")
+
+        if not question or not user_answer:
+            return jsonify({"error": "question and user_answer are required"}), 400
+
+        # Fetch application
+        app = Application.get_by_id(db, app_id)
+        if not app:
+            return jsonify({"error": "Application not found"}), 404
+
+        # Get prep
+        prep = InterviewPrep.get_by_application(db, app_id)
+        if not prep:
+            return jsonify({"error": "Interview prep not started"}), 400
+
+        # Parse company research
+        company_research = {}
+        if prep.get("company_research"):
+            try:
+                company_research = json.loads(prep["company_research"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Call Gemini to score answer
+        processor = EmailProcessor(db)
+        quiz_result = processor.classifier.run_quiz(
+            company_name=app["company_name"],
+            job_title=app["job_title"],
+            question=question,
+            user_answer=user_answer,
+            company_research=company_research
+        )
+
+        # Append to quiz results
+        quiz_results = []
+        if prep.get("quiz_results"):
+            try:
+                quiz_results = json.loads(prep["quiz_results"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        quiz_results.append({
+            "question": question,
+            "user_answer": user_answer,
+            "score": quiz_result.get("score"),
+            "feedback": quiz_result.get("feedback"),
+            "suggested_answer": quiz_result.get("suggested_answer"),
+            "answered_at": datetime.now().isoformat()
+        })
+
+        # Save updated quiz results
+        InterviewPrep.update(db, prep["id"], {"quiz_results": json.dumps(quiz_results)})
+
+        return jsonify(quiz_result), 200
+
+    except Exception as e:
+        logger.error(f"Error submitting quiz answer: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/applications/<int:app_id>/prep", methods=["GET"])
+def get_application_prep(app_id):
+    """Get interview prep for an application."""
+    try:
+        prep = InterviewPrep.get_by_application(db, app_id)
+        if not prep:
+            return jsonify({"error": "No prep found for this application"}), 404
+
+        return jsonify(prep), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching prep: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/prep/history", methods=["GET"])
+def get_prep_history():
+    """Get all interview prep sessions with application info."""
+    try:
+        preps = InterviewPrep.get_all_with_applications(db)
+        return jsonify(preps), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching prep history: {e}")
         return jsonify({"error": str(e)}), 500
 
 
