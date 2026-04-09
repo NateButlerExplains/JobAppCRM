@@ -26,16 +26,125 @@
 
 ## Current In-Progress Task
 
-### TASK-021: Email Classification Tuning & Metrics
-- **Status:** in-progress (CEO decision: prioritize email quality validation)
-- **Priority:** high (blocks feature work until 90% accuracy achieved)
+### TASK-UX-001: CardDetail Modal Edit Overhaul
+- **Status:** queued
+- **Priority:** high (critical UX gap — cards must be fully editable)
 - **Assigned to:** CLAUDE-DEV
-- **Started:** 2026-04-08 16:30 UTC
-- **CEO Approval:** Yes (pause TASK-018/019, test against real environment)
+- **CEO Approval:** Yes — proceeding first
+- **Files:** frontend/src/CardDetail.jsx, frontend/src/api.js, backend/app.py
 
 ---
 
 ## Queued Tasks (Next to Implement)
+
+### TASK-UX-001: CardDetail Modal Edit Overhaul
+- **Status:** queued
+- **Priority:** high (critical UX gap)
+- **Files:** frontend/src/CardDetail.jsx, frontend/src/api.js
+- **Spec:**
+  - Replace right-side sheet with centered modal dialog (shadcn Dialog)
+  - Add pencil "Edit" button in modal header (not visible initially)
+  - Edit mode toggle: click pencil → form inputs appear inline
+  - **Editable fields (in edit mode):**
+    - company_name (text input)
+    - job_title (text input)
+    - job_url (text input)
+    - notes (textarea)
+    - salary_min / salary_max (number inputs as "Salary Range: $X–$Y")
+    - salary_negotiation_target (NEW field — optional, number input, "Your asking price")
+  - **Modal sections:**
+    - View mode: read-only display of above fields
+    - Emails tab: list of linked emails (read-only)
+    - Interactions tab: timeline of notes/calls/texts (read-only)
+  - **Edit mode controls:**
+    - Save button: `PATCH /api/applications/{id}` with all changed fields
+    - Cancel button: discard changes, exit edit mode
+    - Delete button (modal footer): with confirmation modal "Delete this application?" → `DELETE /api/applications/{id}`
+  - **Status/bucket change:**
+    - Add status dropdown in modal (read-only in view mode, editable in edit mode)
+    - On status change, `PATCH /api/applications/{id}` with new status
+    - Dropdown options: Submitted, More Info Required, Interview Started, Denied, Offered
+  - **Modal behavior:**
+    - Click card → modal opens showing current application
+    - Click outside or X button → close modal (if not in edit mode, or prompt if unsaved edits)
+    - Modal centered on screen, not side sheet
+- **Acceptance Criteria:**
+  - Modal opens centered when card clicked ✅
+  - Edit mode toggle (pencil button) shows/hides edit controls ✅
+  - All 7 fields editable (company, title, URL, notes, salary_min/max, negotiation_target) ✅
+  - Save persists changes via PATCH API ✅
+  - Cancel discards changes without saving ✅
+  - Delete button removes application after confirmation ✅
+  - Status dropdown changes pipeline stage ✅
+  - Modal closes on X or outside click ✅
+  - Emails and interactions tabs visible in modal ✅
+
+---
+
+### TASK-UX-002: Fix Timestamp Bug (date_submitted)
+- **Status:** queued
+- **Priority:** high (data integrity)
+- **Files:** backend/email_processor.py, backend/models.py, database migration
+- **Spec:**
+  - **Investigation:**
+    - Check email_processor.py line that parses `receivedDateTime` from Outlook email object
+    - Check if `date_submitted` column is being set correctly (should use email's received date, not sync time)
+    - Verify SQL schema: `date_submitted` column data type (should be DATE, not TIMESTAMP)
+  - **Root cause likely:** All emails mapped to application.date_submitted as current date during sync, not original email date
+  - **Fix:**
+    - Ensure Email object stores `received_date` from Outlook email `receivedDateTime`
+    - When creating application from email, use email.received_date as application.date_submitted
+    - Add database migration to correct existing timestamps (update applications set date_submitted = (SELECT MIN(date_received) FROM emails WHERE application_id = applications.id))
+    - Verify with test email: old email from April 7 should show April 7 date, not today's date
+- **Acceptance Criteria:**
+  - Old emails (April 7, 2026) show correct received date in Kanban ✅
+  - New applications created today show today's date ✅
+  - Sync with real emails confirms dates match Outlook ✅
+  - No applications with future dates ✅
+
+---
+
+### TASK-UX-003: Interview Prep Gating & Workflow
+- **Status:** queued
+- **Priority:** high (prevents premature Gemini calls)
+- **Files:** frontend/src/ApplicationCard.jsx, frontend/src/InterviewPrepPage.jsx, backend/app.py
+- **Spec:**
+  - **Core trio requirement:** "Prep" button only shows when all three are filled:
+    1. company_name (non-empty)
+    2. job_title (non-empty)
+    3. job_url (non-empty, valid URL)
+  - **CardDetail edit mode:**
+    - When editing, show a "Prep Requirements" summary badge:
+      - ✅ company_name
+      - ✅ job_title
+      - ❌ job_url (if missing)
+    - If any required field is missing, show: "Complete company, position, and job link to unlock prep"
+  - **Prep button visibility:**
+    - ApplicationCard: only render "Prep →" button if all three fields present
+    - If missing, show disabled button with tooltip: "Add company, position, and job link to prep"
+  - **InterviewPrepPage workflow:**
+    - When "Prep" clicked, show 3-step flow:
+      1. **Review & Link** — display current company_name, job_title, job_url, salary fields (read-only summary)
+      2. **Research** — "Research Company" button triggers lazy-load of Gemini research (not pre-loaded)
+      3. **Prepare** — Show questions, quiz, etc. (only after research is loaded)
+    - Research endpoint should return early if company_name/job_title missing
+  - **Salary context:**
+    - If salary_min/salary_max set, display in InterviewPrepPage header: "Your range: $X–$Y"
+    - If salary_negotiation_target set, also show: "Your asking price: $Y"
+    - Prep questions + quiz use this as context (Gemini should see the salary info in system prompt)
+  - **Backend validation:**
+    - `POST /api/applications/{id}/prep/research` should return 400 if company_name or job_title missing
+    - Error message: "Provide company name and job title before researching"
+- **Acceptance Criteria:**
+  - "Prep" button hidden on ApplicationCard if any core field missing ✅
+  - CardDetail shows "Prep Requirements" summary in edit mode ✅
+  - Clicking Prep only works if core trio filled ✅
+  - InterviewPrepPage shows salary/negotiation fields at top ✅
+  - Gemini research lazy-loads only when "Research" button clicked ✅
+  - Backend returns 400 if required fields missing ✅
+  - Gating prevents empty company/title errors in Gemini ✅
+
+---
 
 ### TASK-021: Email Classification Tuning & Metrics
 - **Status:** queued
