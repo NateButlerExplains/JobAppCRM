@@ -98,8 +98,59 @@ export function InterviewPrepPage({ application, onBack }) {
   }
 
   const companyResearch = prep?.company_research
-  const interviewQuestions = prep?.interview_questions
-  const questionsToAsk = prep?.questions_to_ask
+  const interviewQuestions = prep?.interview_questions ? (
+    typeof prep.interview_questions === 'string'
+      ? JSON.parse(prep.interview_questions)
+      : prep.interview_questions
+  ) : null
+  const questionsToAsk = prep?.questions_to_ask ? (
+    typeof prep.questions_to_ask === 'string'
+      ? JSON.parse(prep.questions_to_ask)
+      : prep.questions_to_ask
+  ) : null
+
+  // Group interview questions by category
+  const questionsByCategory = interviewQuestions ? (
+    Array.isArray(interviewQuestions)
+      ? interviewQuestions.reduce((acc, q) => {
+          const cat = q.category || 'other'
+          if (!acc[cat]) acc[cat] = []
+          acc[cat].push(q)
+          return acc
+        }, {})
+      : {}
+  ) : {}
+
+  const handleCopyResearch = () => {
+    const researchText = `${application.company_name} - ${application.job_title}
+
+Company Overview:
+${companyResearch?.company_overview || 'N/A'}
+
+Key Products & Services:
+${Array.isArray(companyResearch?.key_products) ? companyResearch.key_products.join('\n') : companyResearch?.key_products || 'N/A'}
+
+Company Culture:
+${companyResearch?.company_culture || 'N/A'}
+
+Organization Structure:
+${companyResearch?.org_structure || 'N/A'}
+
+CEO / Leadership:
+${companyResearch?.ceo_info || 'N/A'}
+
+Recent News:
+${Array.isArray(companyResearch?.recent_news) ? companyResearch.recent_news.join('\n') : companyResearch?.recent_news || 'N/A'}
+
+Industry Relevance:
+${companyResearch?.industry_relevance || 'N/A'}
+
+Hiring Focus:
+${companyResearch?.hiring_focus || 'N/A'}`
+
+    navigator.clipboard.writeText(researchText)
+    alert('Research copied to clipboard!')
+  }
 
   const researchTiles = [
     {
@@ -114,10 +165,9 @@ export function InterviewPrepPage({ application, onBack }) {
       icon: '📦',
       content: companyResearch?.key_products && (
         Array.isArray(companyResearch.key_products) ? (
-          <ul className="space-y-1">
+          <ul className="space-y-2 ml-4">
             {companyResearch.key_products.map((item, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="text-blue-400">→</span>
+              <li key={i} className="list-disc text-slate-300">
                 {item}
               </li>
             ))}
@@ -248,20 +298,34 @@ export function InterviewPrepPage({ application, onBack }) {
       {/* Research Section */}
       {companyResearch ? (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>
-              Company Research
-            </h3>
-            {!interviewQuestions && (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>
+                Company Research
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Last updated: {new Date(prep.updated_at).toLocaleString()}
+              </p>
+            </div>
+            <div className="flex gap-2">
               <button
-                onClick={handleGenerateQuestions}
-                disabled={generatingQuestions}
-                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleCopyResearch}
+                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase text-xs transition-colors"
                 style={{ borderRadius: '0px' }}
               >
-                {generatingQuestions ? 'Generating...' : 'Generate Questions'}
+                📋 Copy
               </button>
-            )}
+              {!interviewQuestions && (
+                <button
+                  onClick={handleGenerateQuestions}
+                  disabled={generatingQuestions}
+                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ borderRadius: '0px' }}
+                >
+                  {generatingQuestions ? '⟳ Generating...' : 'Generate Questions'}
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2 mb-3">

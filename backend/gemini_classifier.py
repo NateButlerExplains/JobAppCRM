@@ -547,6 +547,18 @@ Now provide the complete JSON response with all 8 fields filled in:"""
             result = self._extract_json(response.text)
 
             if result and result.get("company_overview"):
+                # Check if we're missing key fields and try to fill them with pure Gemini knowledge
+                if not result.get("ceo_info") or not result.get("org_structure"):
+                    logger.info(f"📋 Missing CEO/Org info, trying pure knowledge fallback...")
+                    fallback_result = self._research_company_fallback(company_name)
+                    if fallback_result:
+                        if not result.get("ceo_info") and fallback_result.get("ceo_info"):
+                            result["ceo_info"] = fallback_result["ceo_info"]
+                        if not result.get("org_structure") and fallback_result.get("org_structure"):
+                            result["org_structure"] = fallback_result["org_structure"]
+                        if not result.get("recent_news") or not result["recent_news"]:
+                            result["recent_news"] = fallback_result.get("recent_news", [])
+
                 logger.info(f"✅ Successfully researched {company_name} (web_crawled={web_crawled}, source={'website_content' if web_crawled else 'gemini_knowledge'})")
                 result["web_crawled"] = web_crawled
                 result["data_source"] = "website_content" if web_crawled else "gemini_knowledge"
@@ -587,6 +599,43 @@ Now provide the complete JSON response with all 8 fields filled in:"""
         Maintains backward compatibility while enabling web crawling.
         """
         return self.research_company_with_website(company_name, job_title, job_url or "", company_website)
+
+    def _research_company_fallback(self, company_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Fallback research using pure Gemini knowledge to fill in missing fields.
+        Used when website scraping doesn't provide CEO/Org info.
+        """
+        gemini_rate_limiter.wait()
+        logger.info(f"🧠 Fallback research for {company_name} using pure Gemini knowledge...")
+
+        prompt = f"""Provide company information based on your knowledge. Return ONLY valid JSON:
+
+Company: {company_name}
+
+{{
+  "ceo_info": "CEO/founder name and brief background",
+  "org_structure": "Company organizational structure and main departments",
+  "recent_news": ["Recent news item 1 (2024-2026)", "Recent news item 2"]
+}}
+
+If you don't have reliable information about a field, use null. Only include information you're confident about."""
+
+        try:
+            response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
+                temperature=0.3,
+                max_output_tokens=800,
+            ))
+
+            logger.info(f"✅ Fallback research response received ({len(response.text)} chars)")
+            result = self._extract_json(response.text)
+            if result:
+                logger.info(f"✅ Fallback research successful for {company_name}")
+                return result
+            return None
+
+        except Exception as e:
+            logger.warning(f"⚠️  Fallback research failed: {e}")
+            return None
 
     def research_company_legacy(self, company_name: str, job_title: str, job_url: Optional[str] = None) -> Dict[str, Any]:
         """Research a company for interview preparation (pure Gemini, no web crawling)."""
@@ -637,51 +686,62 @@ Focus on information that would be useful for someone interviewing for a {job_ti
     def generate_interview_prep(self, company_name: str, job_title: str, company_research: Dict[str, Any]) -> Dict[str, Any]:
         """Generate interview questions and questions to ask based on company research."""
         gemini_rate_limiter.wait()
+        logger.info(f"🎯 Generating interview questions for {company_name} - {job_title}")
 
+        # Build context from available research fields
         research_context = f"""
-Company Summary: {company_research.get('summary', 'N/A')}
-Business Model: {company_research.get('business_model', 'N/A')}
-Culture Notes: {company_research.get('culture_notes', 'N/A')}
-Key Facts: {', '.join(company_research.get('key_facts', []))}
+Company Overview: {company_research.get('company_overview', 'N/A')}
+Key Products/Services: {', '.join(company_research.get('key_products', [])) if company_research.get('key_products') else 'N/A'}
+Company Culture: {company_research.get('company_culture', 'N/A')}
+Organization: {company_research.get('org_structure', 'N/A')}
+Leadership: {company_research.get('ceo_info', 'N/A')}
+Recent News: {', '.join(company_research.get('recent_news', [])) if company_research.get('recent_news') else 'N/A'}
+Industry Relevance: {company_research.get('industry_relevance', 'N/A')}
+Hiring Focus: {company_research.get('hiring_focus', 'N/A')}
 """
 
-        prompt = f"""Generate interview preparation questions for this role. Respond ONLY with valid JSON, no markdown formatting.
+        prompt = f"""Generate targeted interview preparation materials for this specific role. Respond ONLY with valid JSON, no markdown formatting.
 
 Company: {company_name}
 Job Title: {job_title}
 
-Background:{research_context}
+Company Research Background:
+{research_context}
 
-Generate interview questions and questions to ask the interviewer in this JSON format (respond with ONLY the JSON):
+INSTRUCTIONS:
+1. Generate 10 interview questions that test knowledge of the company, industry, and role-specific skills
+2. Include behavioral, technical, and situational questions
+3. Generate 6-8 smart questions to ask the interviewer
+4. Base questions on the company research and the specific role
+5. Respond with ONLY valid JSON - no markdown, no explanations
+
+JSON Format (EXACT - must include all fields):
 {{
   "interview_questions": [
-    {{"question": "Question 1", "category": "behavioral", "answer_hint": "Hint for how to answer"}},
-    {{"question": "Question 2", "category": "technical", "answer_hint": "Hint for how to answer"}},
-    ...10 total questions...
+    {{"question": "Question text here?", "category": "behavioral|technical|situational", "answer_hint": "Brief hint for answering"}},
+    {{"question": "Question 2?", "category": "technical", "answer_hint": "Hint..."}}
   ],
   "questions_to_ask": [
     "What does success look like in the first 90 days?",
-    "How do you measure performance for this role?",
-    ...5-8 questions to ask the interviewer...
+    "How do you measure performance for this role?"
   ]
 }}
 
-Categories: behavioral, technical, situational
-Include at least 3-4 of each category type.
-Questions should be specific to a {job_title} role at {company_name}."""
+Now generate the complete JSON response:"""
 
         try:
             response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
-                temperature=0.7,
-                max_output_tokens=1200,
+                temperature=0.6,
+                max_output_tokens=2000,
             ))
 
+            logger.info(f"✅ Interview question response received ({len(response.text)} chars)")
             result = self._extract_json(response.text)
-            if result and result.get("interview_questions"):
-                logger.info(f"Generated {len(result['interview_questions'])} interview questions for {company_name}")
+            if result and result.get("interview_questions") and len(result["interview_questions"]) > 0:
+                logger.info(f"✅ Generated {len(result['interview_questions'])} interview questions for {company_name}")
                 return result
             else:
-                logger.warning(f"Interview question generation returned incomplete data: {result}")
+                logger.warning(f"⚠️  Interview question generation returned incomplete data: {result}")
                 return {"interview_questions": [], "questions_to_ask": []}
 
         except Exception as e:
