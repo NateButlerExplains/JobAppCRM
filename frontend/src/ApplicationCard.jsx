@@ -15,40 +15,40 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
   return (
     <div
       onClick={onClick}
-      className="p-6 bg-white border border-gray-200 hover:border-black cursor-pointer group relative transition-colors duration-200"
+      className="p-6 bg-slate-800 border border-slate-700 hover:border-blue-500 cursor-pointer group relative transition-colors duration-200"
       style={{ borderRadius: '0px' }}
     >
       {/* Delete button - visible on hover */}
       {onDelete && (
         <button
           onClick={handleDelete}
-          className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-red-600"
+          className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-red-400"
           title={isArchived ? 'Permanently delete' : 'Move to trash'}
         >
-          <Trash2 className="w-5 h-5 text-gray-400 hover:text-red-600" />
+          <Trash2 className="w-5 h-5 text-slate-500 hover:text-red-500" />
         </button>
       )}
 
       <div className="space-y-4">
         {/* Company Name */}
-        <h3 className="font-black text-lg leading-tight text-black truncate" style={{ letterSpacing: '0.5px' }}>
+        <h3 className="font-black text-lg leading-tight text-white truncate" style={{ letterSpacing: '0.5px' }}>
           {application.company_name}
         </h3>
 
         {/* Job Title */}
-        <p className="text-sm text-gray-700 truncate font-medium">
+        <p className="text-sm text-slate-300 truncate font-medium">
           {application.job_title}
         </p>
 
         {/* Date Applied */}
-        <p className="text-xs text-gray-500 font-medium">
+        <p className="text-xs text-slate-500 font-medium">
           {new Date(application.date_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
         </p>
 
         {/* Pending Suggestion Badge */}
         {hasPendingSuggestion && (
           <div className="pt-2">
-            <Badge className="bg-yellow-300 text-black border-0 font-bold uppercase text-xs" style={{ borderRadius: '4px', letterSpacing: '0.5px' }}>
+            <Badge className="bg-blue-600 text-white border-0 font-bold uppercase text-xs" style={{ borderRadius: '4px', letterSpacing: '0.5px' }}>
               ⚡ Suggestion
             </Badge>
           </div>

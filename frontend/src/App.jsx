@@ -15,7 +15,7 @@ function App() {
   const [selectedApp, setSelectedApp] = useState(null)
   const [showCardDetail, setShowCardDetail] = useState(false)
   const [showNewAppForm, setShowNewAppForm] = useState(false)
-  const [currentPage, setCurrentPage] = useState('dashboard') // 'dashboard' or 'settings'
+  const [currentPage, setCurrentPage] = useState('dashboard')
 
   useEffect(() => {
     loadData()
@@ -53,10 +53,10 @@ function App() {
 
   if (loading && currentPage === 'dashboard') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p className="text-muted-foreground">Loading Job CRM...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-slate-400">Loading Job CRM...</p>
         </div>
       </div>
     )
@@ -64,12 +64,13 @@ function App() {
 
   if (error && currentPage === 'dashboard') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="text-center">
-          <p className="text-destructive mb-4">Error: {error}</p>
+          <p className="text-red-400 mb-4">Error: {error}</p>
           <button
             onClick={loadData}
-            className="bg-primary text-primary-foreground px-4 py-2 rounded hover:opacity-90"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold uppercase tracking-wide transition-colors"
+            style={{ borderRadius: '0px' }}
           >
             Retry
           </button>
@@ -79,22 +80,22 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white sticky top-0 z-30">
+      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-8 py-12">
           <div className="flex justify-between items-start gap-8 mb-8">
             <div>
-              <h1 className="text-5xl font-black uppercase tracking-tight" style={{ letterSpacing: '2px' }}>
+              <h1 className="text-5xl font-black uppercase tracking-tight text-white" style={{ letterSpacing: '2px' }}>
                 Job CRM
               </h1>
-              <p className="text-gray-600 text-sm mt-3 font-medium uppercase tracking-widest">Track Your Pipeline</p>
+              <p className="text-slate-400 text-sm mt-3 font-medium uppercase tracking-widest" style={{ letterSpacing: '0.5px' }}>Track Your Pipeline</p>
             </div>
             {currentPage === 'dashboard' && (
               <button
                 onClick={() => setShowNewAppForm(true)}
-                className="px-6 py-4 bg-black text-white font-bold uppercase text-sm hover:bg-gray-900 transition-colors border-none"
-                style={{ letterSpacing: '0.5px' }}
+                className="px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-sm transition-colors border-0 shadow-lg hover:shadow-blue-500/50"
+                style={{ letterSpacing: '0.5px', borderRadius: '0px' }}
               >
                 + New Application
               </button>
@@ -102,13 +103,13 @@ function App() {
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-8 border-t border-gray-200 pt-6">
+          <div className="flex gap-8 border-t border-slate-800 pt-6">
             <button
               onClick={() => setCurrentPage('dashboard')}
               className={`font-bold uppercase text-xs tracking-widest transition-colors pb-4 border-b-2 ${
                 currentPage === 'dashboard'
-                  ? 'text-black border-black'
-                  : 'text-gray-500 border-transparent hover:text-black'
+                  ? 'text-blue-400 border-blue-400'
+                  : 'text-slate-500 border-transparent hover:text-slate-300'
               }`}
               style={{ letterSpacing: '0.5px' }}
             >
@@ -118,8 +119,8 @@ function App() {
               onClick={() => setCurrentPage('settings')}
               className={`font-bold uppercase text-xs tracking-widest transition-colors pb-4 border-b-2 ${
                 currentPage === 'settings'
-                  ? 'text-black border-black'
-                  : 'text-gray-500 border-transparent hover:text-black'
+                  ? 'text-blue-400 border-blue-400'
+                  : 'text-slate-500 border-transparent hover:text-slate-300'
               }`}
               style={{ letterSpacing: '0.5px' }}
             >
@@ -130,13 +131,13 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col bg-white">
+      <main className="flex-1 flex flex-col">
         <div className="flex-1 max-w-7xl mx-auto w-full px-8 py-12">
           {currentPage === 'settings' && <Settings />}
           {currentPage === 'dashboard' && (
             <>
               {/* Stats Bar */}
-              <div className="grid grid-cols-5 gap-6 mb-16 border-b border-gray-200 pb-12">
+              <div className="grid grid-cols-5 gap-6 mb-16 border-b border-slate-800 pb-12">
                 {[
                   { label: 'Submitted', value: stats.Submitted || 0 },
                   { label: 'More Info', value: stats['More Info Required'] || 0 },
@@ -145,8 +146,8 @@ function App() {
                   { label: 'Offered', value: stats.Offered || 0 },
                 ].map((stat, idx) => (
                   <div key={idx} className="text-center">
-                    <div className="text-4xl font-black mb-2">{stat.value}</div>
-                    <div className="text-gray-600 text-xs font-bold uppercase tracking-widest" style={{ letterSpacing: '0.5px' }}>
+                    <div className="text-4xl font-black text-white mb-2">{stat.value}</div>
+                    <div className="text-slate-400 text-xs font-bold uppercase tracking-widest" style={{ letterSpacing: '0.5px' }}>
                       {stat.label}
                     </div>
                   </div>
@@ -163,12 +164,12 @@ function App() {
                 />
               </div>
 
-              {/* Placeholder for Suggestions */}
+              {/* Suggestions */}
               {suggestions.length > 0 && (
-                <div className="p-8 bg-card border rounded">
-                  <h2 className="font-bold mb-4">Stage Suggestions ({suggestions.length})</h2>
-                  <div className="text-muted-foreground">
-                    <p>Stage Suggestions Component</p>
+                <div className="p-8 bg-slate-800/50 border border-slate-700 rounded-lg">
+                  <h2 className="font-bold text-white mb-4 uppercase tracking-wide">Stage Suggestions ({suggestions.length})</h2>
+                  <div className="text-slate-400">
+                    <p>Pending suggestions component</p>
                   </div>
                 </div>
               )}
@@ -192,9 +193,7 @@ function App() {
         isOpen={showNewAppForm}
         onClose={() => setShowNewAppForm(false)}
         onSuccess={(newApp) => {
-          // Add new app to the beginning of the list
           setApplications(prev => [newApp, ...prev])
-          // Reload stats
           loadData()
         }}
       />

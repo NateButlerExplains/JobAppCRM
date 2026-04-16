@@ -94,18 +94,18 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete }) {
     <div className="flex flex-col gap-8 min-h-[600px]">
       <div className={`font-black text-xl uppercase flex items-center gap-3 pb-4 border-b-2 ${
         isArchived
-          ? 'text-red-600 border-red-600'
-          : 'text-black border-black'
+          ? 'text-red-500 border-red-500'
+          : 'text-white border-slate-600'
       }`} style={{ letterSpacing: '1px' }}>
         {column.label}
-        <span className="ml-auto text-gray-500 font-normal text-sm lowercase" style={{ letterSpacing: '0px' }}>{items.length} items</span>
+        <span className="ml-auto text-slate-500 font-normal text-sm lowercase" style={{ letterSpacing: '0px' }}>{items.length} items</span>
       </div>
       <div
         ref={setNodeRef}
         className={`space-y-4 flex-1 p-6 min-h-[500px] transition-colors duration-200 border ${
           isArchived
-            ? 'bg-gray-50 border-red-300'
-            : 'bg-white border-gray-200'
+            ? 'bg-slate-800/40 border-red-900/50'
+            : 'bg-slate-800/30 border-slate-700'
         }`}
         style={{ borderRadius: '0px' }}
       >
