@@ -49,16 +49,12 @@ function App() {
   }
 
   const handleApplicationsChange = (updatedApps) => {
-    console.log(`[App.handleApplicationsChange] Called with ${updatedApps.length} apps`)
-    updatedApps.forEach(app => console.log(`  - ID ${app.id}: ${app.company_name} (${app.status})`))
-    console.log(`[App] Setting applications state...`)
     setApplications(updatedApps)
     // Recalculate stats after changes
     const newStats = {}
     updatedApps.forEach(app => {
       newStats[app.status] = (newStats[app.status] || 0) + 1
     })
-    console.log(`[App.handleApplicationsChange] New stats:`, newStats)
     setStats(newStats)
   }
 

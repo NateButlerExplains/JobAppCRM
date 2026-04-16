@@ -7,13 +7,9 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
   const hasRequiredFields = application.company_name && application.job_title && application.job_url
 
   const handleDelete = (e) => {
-    console.log(`[ApplicationCard.handleDelete] Clicked delete for app ${application.id}`)
     e.stopPropagation()
     if (onDelete) {
-      console.log(`[ApplicationCard.handleDelete] Calling onDelete(${application.id})`)
       onDelete(application.id)
-    } else {
-      console.log(`[ApplicationCard.handleDelete] ERROR: onDelete not provided!`)
     }
   }
 
