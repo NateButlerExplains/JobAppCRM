@@ -79,46 +79,49 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Header */}
-      <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-30 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex justify-between items-center mb-6">
+      <header className="border-b border-gray-200 bg-white sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-8 py-12">
+          <div className="flex justify-between items-start gap-8 mb-8">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-black uppercase tracking-tight" style={{ letterSpacing: '2px' }}>
                 Job CRM
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track your applications pipeline</p>
+              <p className="text-gray-600 text-sm mt-3 font-medium uppercase tracking-widest">Track Your Pipeline</p>
             </div>
             {currentPage === 'dashboard' && (
               <button
                 onClick={() => setShowNewAppForm(true)}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105"
+                className="px-6 py-4 bg-black text-white font-bold uppercase text-sm hover:bg-gray-900 transition-colors border-none"
+                style={{ letterSpacing: '0.5px' }}
               >
-                ✨ New Application
+                + New Application
               </button>
             )}
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-2 border-t border-slate-200 dark:border-slate-800 pt-4">
+          <div className="flex gap-8 border-t border-gray-200 pt-6">
             <button
               onClick={() => setCurrentPage('dashboard')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-4 border-b-2 ${
                 currentPage === 'dashboard'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-black border-black'
+                  : 'text-gray-500 border-transparent hover:text-black'
               }`}
+              style={{ letterSpacing: '0.5px' }}
             >
               Dashboard
             </button>
             <button
               onClick={() => setCurrentPage('settings')}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-4 border-b-2 ${
                 currentPage === 'settings'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'text-black border-black'
+                  : 'text-gray-500 border-transparent hover:text-black'
               }`}
+              style={{ letterSpacing: '0.5px' }}
             >
               Settings
             </button>
@@ -127,23 +130,25 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
-        <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
+      <main className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 max-w-7xl mx-auto w-full px-8 py-12">
           {currentPage === 'settings' && <Settings />}
           {currentPage === 'dashboard' && (
             <>
               {/* Stats Bar */}
-              <div className="grid grid-cols-5 gap-4 mb-10">
+              <div className="grid grid-cols-5 gap-6 mb-16 border-b border-gray-200 pb-12">
                 {[
-                  { label: 'Submitted', value: stats.Submitted || 0, color: 'from-blue-500 to-blue-600' },
-                  { label: 'More Info', value: stats['More Info Required'] || 0, color: 'from-amber-500 to-amber-600' },
-                  { label: 'Interview', value: stats['Interview Started'] || 0, color: 'from-purple-500 to-purple-600' },
-                  { label: 'Denied', value: stats.Denied || 0, color: 'from-red-500 to-red-600' },
-                  { label: 'Offered', value: stats.Offered || 0, color: 'from-emerald-500 to-emerald-600' },
+                  { label: 'Submitted', value: stats.Submitted || 0 },
+                  { label: 'More Info', value: stats['More Info Required'] || 0 },
+                  { label: 'Interview', value: stats['Interview Started'] || 0 },
+                  { label: 'Denied', value: stats.Denied || 0 },
+                  { label: 'Offered', value: stats.Offered || 0 },
                 ].map((stat, idx) => (
-                  <div key={idx} className={`bg-gradient-to-br ${stat.color} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-shadow duration-200`}>
-                    <div className="text-sm font-medium opacity-90">{stat.label}</div>
-                    <div className="text-4xl font-bold mt-3">{stat.value}</div>
+                  <div key={idx} className="text-center">
+                    <div className="text-4xl font-black mb-2">{stat.value}</div>
+                    <div className="text-gray-600 text-xs font-bold uppercase tracking-widest" style={{ letterSpacing: '0.5px' }}>
+                      {stat.label}
+                    </div>
                   </div>
                 ))}
               </div>

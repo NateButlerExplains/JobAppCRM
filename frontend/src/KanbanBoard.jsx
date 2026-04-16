@@ -91,22 +91,23 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete }) {
   const isArchived = column.isTrash
 
   return (
-    <div className="flex flex-col gap-4 min-h-[600px]">
-      <div className={`px-4 py-3 rounded-lg font-bold text-sm flex items-center gap-2 ${
+    <div className="flex flex-col gap-8 min-h-[600px]">
+      <div className={`font-black text-xl uppercase flex items-center gap-3 pb-4 border-b-2 ${
         isArchived
-          ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-      }`}>
-        {isArchived ? '🗑️' : '📋'} {column.label}
-        <span className="ml-auto text-xs opacity-75 font-normal">{items.length}</span>
+          ? 'text-red-600 border-red-600'
+          : 'text-black border-black'
+      }`} style={{ letterSpacing: '1px' }}>
+        {column.label}
+        <span className="ml-auto text-gray-500 font-normal text-sm lowercase" style={{ letterSpacing: '0px' }}>{items.length} items</span>
       </div>
       <div
         ref={setNodeRef}
-        className={`space-y-3 flex-1 rounded-xl p-4 min-h-[500px] transition-all duration-200 ${
+        className={`space-y-4 flex-1 p-6 min-h-[500px] transition-colors duration-200 border ${
           isArchived
-            ? 'bg-red-50 dark:bg-red-950/20 border-2 border-red-200 dark:border-red-900/40'
-            : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700'
+            ? 'bg-gray-50 border-red-300'
+            : 'bg-white border-gray-200'
         }`}
+        style={{ borderRadius: '0px' }}
       >
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {items.map(app => (
