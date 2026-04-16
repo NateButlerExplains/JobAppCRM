@@ -40,8 +40,8 @@ function SortableCard({ id, application, hasSuggestion, onClick }) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: transition || 'transform 150ms cubic-bezier(0.2, 0, 0, 1)',
+    opacity: isDragging ? 0.3 : 1,
   }
 
   return (
@@ -56,6 +56,19 @@ function SortableCard({ id, application, hasSuggestion, onClick }) {
         application={application}
         hasSuggestion={hasSuggestion}
         onClick={onClick}
+      />
+    </div>
+  )
+}
+
+// Draggable card overlay (shown while dragging)
+function DraggingCardOverlay({ application, hasSuggestion }) {
+  return (
+    <div className="transform scale-105 drop-shadow-2xl">
+      <ApplicationCard
+        application={application}
+        hasSuggestion={hasSuggestion}
+        isDragging={true}
       />
     </div>
   )
@@ -104,10 +117,12 @@ function KanbanColumn({ column, items, suggestions, onCardClick }) {
 export function KanbanBoard({ applications, suggestions, onCardClick, onApplicationsChange }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [activeId, setActiveId] = useState(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      distance: 8,
+      distance: 5,
+      delay: 50,
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -125,9 +140,16 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
 
   const [items, setItems] = useState(columnItems())
 
+  // Track drag start
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id)
+  }
+
   // Update local state when applications change
   const handleDragEnd = async (event) => {
     const { active, over } = event
+
+    setActiveId(null)
 
     if (!over) return
 
@@ -189,6 +211,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-5 gap-6 overflow-x-auto pb-4">
@@ -203,8 +226,13 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
           ))}
         </div>
 
-        <DragOverlay>
-          {/* Drag overlay for visual feedback */}
+        <DragOverlay dropAnimation={null}>
+          {activeId && applications.find(a => a.id === activeId) && (
+            <DraggingCardOverlay
+              application={applications.find(a => a.id === activeId)}
+              hasSuggestion={suggestions.some(s => s.application_id === activeId)}
+            />
+          )}
         </DragOverlay>
       </DndContext>
 
