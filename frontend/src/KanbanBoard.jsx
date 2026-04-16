@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   DndContext,
   closestCorners,
@@ -162,6 +162,11 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
   }, [applications])
 
   const [items, setItems] = useState(columnItems())
+
+  // Sync items when applications change
+  useEffect(() => {
+    setItems(columnItems())
+  }, [applications, columnItems])
 
   // Track drag start
   const handleDragStart = (event) => {

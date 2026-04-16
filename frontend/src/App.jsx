@@ -49,6 +49,12 @@ function App() {
 
   const handleApplicationsChange = (updatedApps) => {
     setApplications(updatedApps)
+    // Recalculate stats after changes
+    const newStats = {}
+    updatedApps.forEach(app => {
+      newStats[app.status] = (newStats[app.status] || 0) + 1
+    })
+    setStats(newStats)
   }
 
   if (loading && currentPage === 'dashboard') {
@@ -81,50 +87,51 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Header */}
+      {/* Header - Slim */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-30">
-        <div className="w-full px-8 py-8">
-          <div className="flex justify-between items-center gap-8 mb-4">
-            <div>
-              <h1 className="text-4xl font-black uppercase tracking-tight text-white" style={{ letterSpacing: '2px' }}>
-                Job CRM
-              </h1>
+        <div className="w-full px-8 py-4">
+          <div className="flex justify-between items-center">
+            {/* Logo - Left */}
+            <h1 className="text-3xl font-black uppercase tracking-tight text-white" style={{ letterSpacing: '2px' }}>
+              Job CRM
+            </h1>
+
+            {/* Navigation - Center */}
+            <div className="flex gap-8">
+              <button
+                onClick={() => setCurrentPage('dashboard')}
+                className={`font-bold uppercase text-xs tracking-widest transition-colors pb-2 border-b-2 ${
+                  currentPage === 'dashboard'
+                    ? 'text-blue-400 border-blue-400'
+                    : 'text-slate-500 border-transparent hover:text-slate-300'
+                }`}
+                style={{ letterSpacing: '0.5px' }}
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={() => setCurrentPage('settings')}
+                className={`font-bold uppercase text-xs tracking-widest transition-colors pb-2 border-b-2 ${
+                  currentPage === 'settings'
+                    ? 'text-blue-400 border-blue-400'
+                    : 'text-slate-500 border-transparent hover:text-slate-300'
+                }`}
+                style={{ letterSpacing: '0.5px' }}
+              >
+                Settings
+              </button>
             </div>
+
+            {/* Button - Right */}
             {currentPage === 'dashboard' && (
               <button
                 onClick={() => setShowNewAppForm(true)}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
                 style={{ letterSpacing: '0.5px', borderRadius: '0px' }}
               >
-                + New Application
+                + New
               </button>
             )}
-          </div>
-
-          {/* Navigation */}
-          <div className="flex gap-6 border-t border-slate-800 pt-3">
-            <button
-              onClick={() => setCurrentPage('dashboard')}
-              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-3 border-b-2 ${
-                currentPage === 'dashboard'
-                  ? 'text-blue-400 border-blue-400'
-                  : 'text-slate-500 border-transparent hover:text-slate-300'
-              }`}
-              style={{ letterSpacing: '0.5px' }}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setCurrentPage('settings')}
-              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-3 border-b-2 ${
-                currentPage === 'settings'
-                  ? 'text-blue-400 border-blue-400'
-                  : 'text-slate-500 border-transparent hover:text-slate-300'
-              }`}
-              style={{ letterSpacing: '0.5px' }}
-            >
-              Settings
-            </button>
           </div>
         </div>
       </header>
@@ -136,16 +143,16 @@ function App() {
           {currentPage === 'dashboard' && (
             <>
               {/* Stats Bar */}
-              <div className="grid grid-cols-5 gap-6 mb-10 border-b border-slate-800 pb-8">
+              <div className="grid grid-cols-5 gap-4 mb-8">
                 {[
-                  { label: 'Submitted', value: stats.Submitted || 0 },
-                  { label: 'More Info', value: stats['More Info Required'] || 0 },
-                  { label: 'Interview', value: stats['Interview Started'] || 0 },
-                  { label: 'Denied', value: stats.Denied || 0 },
-                  { label: 'Offered', value: stats.Offered || 0 },
+                  { label: 'Submitted', key: 'Submitted' },
+                  { label: 'More Info', key: 'More Info Required' },
+                  { label: 'Interview', key: 'Interview Started' },
+                  { label: 'Denied', key: 'Denied' },
+                  { label: 'Offered', key: 'Offered' },
                 ].map((stat, idx) => (
-                  <div key={idx} className="text-center">
-                    <div className="text-4xl font-black text-white mb-2">{stat.value}</div>
+                  <div key={idx} className="text-center border-b border-slate-800 pb-4">
+                    <div className="text-3xl font-black text-white mb-1">{stats[stat.key] || 0}</div>
                     <div className="text-slate-400 text-xs font-bold uppercase tracking-widest" style={{ letterSpacing: '0.5px' }}>
                       {stat.label}
                     </div>
@@ -165,7 +172,7 @@ function App() {
 
               {/* Suggestions */}
               {suggestions.length > 0 && (
-                <div className="p-8 bg-slate-800/50 border border-slate-700 rounded-lg">
+                <div className="p-8 bg-slate-800/50 border border-slate-700">
                   <h2 className="font-bold text-white mb-4 uppercase tracking-wide">Stage Suggestions ({suggestions.length})</h2>
                   <div className="text-slate-400">
                     <p>Pending suggestions component</p>
