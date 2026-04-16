@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { getApplications, getStats, getStageSuggestions, getUnlinkedEmails } from './api'
+import { getApplications, getStats, getStageSuggestions } from './api'
 import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
-import { UnlinkedEmailsTray } from './UnlinkedEmailsTray'
 import { Settings } from './Settings'
 import './App.css'
 
@@ -11,7 +10,6 @@ function App() {
   const [applications, setApplications] = useState([])
   const [stats, setStats] = useState({})
   const [suggestions, setSuggestions] = useState([])
-  const [unlinkedEmails, setUnlinkedEmails] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedApp, setSelectedApp] = useState(null)
@@ -27,17 +25,15 @@ function App() {
     setLoading(true)
     setError(null)
     try {
-      const [appsRes, statsRes, suggestionsRes, emailsRes] = await Promise.all([
+      const [appsRes, statsRes, suggestionsRes] = await Promise.all([
         getApplications(),
         getStats(),
         getStageSuggestions(),
-        getUnlinkedEmails(),
       ])
 
       setApplications(appsRes.data)
       setStats(statsRes.data)
       setSuggestions(suggestionsRes.data)
-      setUnlinkedEmails(emailsRes.data)
     } catch (err) {
       setError(err.message)
       console.error('Error loading data:', err)
@@ -131,72 +127,52 @@ function App() {
           {currentPage === 'settings' && <Settings />}
           {currentPage === 'dashboard' && (
             <>
-
-        {/* Stats Bar */}
-        <div className="grid grid-cols-5 gap-4 mb-8">
-          <div className="bg-card border rounded p-4">
-            <div className="text-sm text-muted-foreground">Submitted</div>
-            <div className="text-2xl font-bold">{stats.Submitted || 0}</div>
-          </div>
-          <div className="bg-card border rounded p-4">
-            <div className="text-sm text-muted-foreground">More Info</div>
-            <div className="text-2xl font-bold">{stats['More Info Required'] || 0}</div>
-          </div>
-          <div className="bg-card border rounded p-4">
-            <div className="text-sm text-muted-foreground">Interview</div>
-            <div className="text-2xl font-bold">{stats['Interview Started'] || 0}</div>
-          </div>
-          <div className="bg-card border rounded p-4">
-            <div className="text-sm text-muted-foreground">Denied</div>
-            <div className="text-2xl font-bold">{stats.Denied || 0}</div>
-          </div>
-          <div className="bg-card border rounded p-4">
-            <div className="text-sm text-muted-foreground">Offered</div>
-            <div className="text-2xl font-bold">{stats.Offered || 0}</div>
-          </div>
-        </div>
-
-        {/* Kanban Board */}
-        <div className="mb-8">
-          <KanbanBoard
-            applications={applications}
-            suggestions={suggestions}
-            onCardClick={handleCardClick}
-            onApplicationsChange={handleApplicationsChange}
-          />
-        </div>
-
-            {/* Placeholder for Suggestions */}
-            {suggestions.length > 0 && (
-              <div className="p-8 bg-card border rounded">
-                <h2 className="font-bold mb-4">Stage Suggestions ({suggestions.length})</h2>
-                <div className="text-muted-foreground">
-                  <p>Stage Suggestions Component</p>
+              {/* Stats Bar */}
+              <div className="grid grid-cols-5 gap-4 mb-8">
+                <div className="bg-card border rounded p-4">
+                  <div className="text-sm text-muted-foreground">Submitted</div>
+                  <div className="text-2xl font-bold">{stats.Submitted || 0}</div>
+                </div>
+                <div className="bg-card border rounded p-4">
+                  <div className="text-sm text-muted-foreground">More Info</div>
+                  <div className="text-2xl font-bold">{stats['More Info Required'] || 0}</div>
+                </div>
+                <div className="bg-card border rounded p-4">
+                  <div className="text-sm text-muted-foreground">Interview</div>
+                  <div className="text-2xl font-bold">{stats['Interview Started'] || 0}</div>
+                </div>
+                <div className="bg-card border rounded p-4">
+                  <div className="text-sm text-muted-foreground">Denied</div>
+                  <div className="text-2xl font-bold">{stats.Denied || 0}</div>
+                </div>
+                <div className="bg-card border rounded p-4">
+                  <div className="text-sm text-muted-foreground">Offered</div>
+                  <div className="text-2xl font-bold">{stats.Offered || 0}</div>
                 </div>
               </div>
-            )}
+
+              {/* Kanban Board */}
+              <div className="mb-8">
+                <KanbanBoard
+                  applications={applications}
+                  suggestions={suggestions}
+                  onCardClick={handleCardClick}
+                  onApplicationsChange={handleApplicationsChange}
+                />
+              </div>
+
+              {/* Placeholder for Suggestions */}
+              {suggestions.length > 0 && (
+                <div className="p-8 bg-card border rounded">
+                  <h2 className="font-bold mb-4">Stage Suggestions ({suggestions.length})</h2>
+                  <div className="text-muted-foreground">
+                    <p>Stage Suggestions Component</p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
-
-        {/* Unlinked Emails Tray */}
-        {currentPage === 'dashboard' && (
-        <div className="mt-auto">
-          <UnlinkedEmailsTray
-            emails={unlinkedEmails}
-            applications={applications}
-            onEmailLinked={(emailId, appId) => {
-              // Remove email from unlinked list
-              setUnlinkedEmails(prev => prev.filter(e => e.id !== emailId))
-              // Reload data to update app's email count
-              loadData()
-            }}
-            onError={(err) => {
-              setError(err)
-            }}
-          />
-        </div>
-        )}
       </main>
 
       {/* Card Detail Panel */}

@@ -24,7 +24,6 @@ class Database:
         self.connection.execute("PRAGMA journal_mode=WAL")
         self.connection.execute("PRAGMA synchronous=NORMAL")
         self.create_tables()
-        self._migrate_sync_logs_status()
 
     def create_tables(self):
         """Create all database tables."""
@@ -51,15 +50,10 @@ class Database:
         CREATE TABLE IF NOT EXISTS emails (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             application_id INTEGER,
-            ms_message_id TEXT UNIQUE NOT NULL,
             sender TEXT NOT NULL,
             subject TEXT NOT NULL,
             body_excerpt TEXT,
             date_received TIMESTAMP NOT NULL,
-            email_type TEXT DEFAULT 'other'
-                CHECK(email_type IN ('application_confirmation', 'interview_request', 'rejection', 'more_info_needed', 'other', 'unclassified')),
-            gemini_classification TEXT,
-            linked_confidence REAL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
         )
@@ -97,75 +91,6 @@ class Database:
         )
         """)
 
-        # PROCESSED_EMAILS table (dedup tracking)
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS processed_emails (
-            ms_message_id TEXT PRIMARY KEY
-        )
-        """)
-
-        # SYNC_LOGS table
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sync_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            started_at TIMESTAMP NOT NULL,
-            finished_at TIMESTAMP,
-            emails_fetched INTEGER DEFAULT 0,
-            emails_processed INTEGER DEFAULT 0,
-            apps_created INTEGER DEFAULT 0,
-            errors TEXT,
-            status TEXT DEFAULT 'running'
-                CHECK(status IN ('running', 'completed', 'failed', 'cancelled')),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        """)
-
-    def _sync_logs_allows_cancelled(self) -> bool:
-        cursor = self.connection.execute(
-            "SELECT sql FROM sqlite_master WHERE type='table' AND name='sync_logs'"
-        )
-        row = cursor.fetchone()
-        if not row or not row["sql"]:
-            return True
-        return "cancelled" in row["sql"]
-
-    def _migrate_sync_logs_status(self):
-        if self._sync_logs_allows_cancelled():
-            return
-        try:
-            self.connection.execute("BEGIN")
-            self.connection.execute("""
-            CREATE TABLE sync_logs_new (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                started_at TIMESTAMP NOT NULL,
-                finished_at TIMESTAMP,
-                emails_fetched INTEGER DEFAULT 0,
-                emails_processed INTEGER DEFAULT 0,
-                apps_created INTEGER DEFAULT 0,
-                errors TEXT,
-                status TEXT DEFAULT 'running'
-                    CHECK(status IN ('running', 'completed', 'failed', 'cancelled')),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """)
-            self.connection.execute("""
-            INSERT INTO sync_logs_new (
-                id, started_at, finished_at, emails_fetched, emails_processed,
-                apps_created, errors, status, created_at
-            )
-            SELECT
-                id, started_at, finished_at, emails_fetched, emails_processed,
-                apps_created, errors, status, created_at
-            FROM sync_logs
-            """)
-            self.connection.execute("DROP TABLE sync_logs")
-            self.connection.execute("ALTER TABLE sync_logs_new RENAME TO sync_logs")
-            self.connection.execute("COMMIT")
-        except Exception:
-            self.connection.execute("ROLLBACK")
-            raise
-
-        self.connection.commit()
 
     def execute(self, query: str, params: tuple = ()):
         """Execute a query and return the cursor."""
@@ -242,18 +167,14 @@ class Application:
 
 class Email:
     @staticmethod
-    def create(db: Database, ms_message_id: str, sender: str, subject: str,
+    def create(db: Database, sender: str, subject: str,
                body_excerpt: Optional[str] = None, date_received: Optional[str] = None,
-               email_type: str = "other", gemini_classification: Optional[Dict] = None,
-               application_id: Optional[int] = None, linked_confidence: Optional[float] = None) -> int:
+               application_id: Optional[int] = None) -> int:
         """Create a new email record."""
-        classification_json = json.dumps(gemini_classification) if gemini_classification else None
         cursor = db.execute(
-            """INSERT INTO emails (ms_message_id, sender, subject, body_excerpt, date_received, email_type,
-                                   gemini_classification, application_id, linked_confidence)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (ms_message_id, sender, subject, body_excerpt, date_received or datetime.now().isoformat(),
-             email_type, classification_json, application_id, linked_confidence)
+            """INSERT INTO emails (sender, subject, body_excerpt, date_received, application_id)
+               VALUES (?, ?, ?, ?, ?)""",
+            (sender, subject, body_excerpt, date_received or datetime.now().isoformat(), application_id)
         )
         db.commit()
         return cursor.lastrowid
@@ -264,14 +185,6 @@ class Email:
         cursor = db.execute("SELECT * FROM emails WHERE id = ?", (email_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
-
-    @staticmethod
-    def get_unlinked(db: Database) -> List[Dict[str, Any]]:
-        """Get all unlinked emails (application_id IS NULL)."""
-        cursor = db.execute(
-            "SELECT * FROM emails WHERE application_id IS NULL ORDER BY date_received DESC"
-        )
-        return [dict(row) for row in cursor.fetchall()]
 
     @staticmethod
     def get_by_application(db: Database, app_id: int) -> List[Dict[str, Any]]:
@@ -290,24 +203,6 @@ class Email:
             (app_id, email_id)
         )
         db.commit()
-
-    @staticmethod
-    def mark_as_processed(db: Database, ms_message_id: str):
-        """Mark an email as processed."""
-        db.execute(
-            "INSERT OR IGNORE INTO processed_emails (ms_message_id) VALUES (?)",
-            (ms_message_id,)
-        )
-        db.commit()
-
-    @staticmethod
-    def is_processed(db: Database, ms_message_id: str) -> bool:
-        """Check if an email has been processed."""
-        cursor = db.execute(
-            "SELECT 1 FROM processed_emails WHERE ms_message_id = ?",
-            (ms_message_id,)
-        )
-        return cursor.fetchone() is not None
 
 
 class Interaction:
@@ -378,71 +273,3 @@ class StageSuggestion:
             (suggestion_id,)
         )
         db.commit()
-
-
-class SyncLog:
-    @staticmethod
-    def create(db: Database) -> int:
-        """Create a new sync log entry."""
-        cursor = db.execute(
-            "INSERT INTO sync_logs (started_at, status) VALUES (?, 'running')",
-            (datetime.now().isoformat(),)
-        )
-        db.commit()
-        return cursor.lastrowid
-
-    @staticmethod
-    def update(db: Database, log_id: int, emails_fetched: int = 0, emails_processed: int = 0,
-               apps_created: int = 0, status: str = "completed", errors: Optional[List[str]] = None):
-        """Update a sync log entry."""
-        errors_json = json.dumps(errors) if errors else None
-        db.execute(
-            """UPDATE sync_logs SET finished_at = ?, emails_fetched = ?, emails_processed = ?,
-                                    apps_created = ?, status = ?, errors = ?
-               WHERE id = ?""",
-            (datetime.now().isoformat(), emails_fetched, emails_processed, apps_created, status, errors_json, log_id)
-        )
-        db.commit()
-
-    @staticmethod
-    def update_progress(db: Database, log_id: int, emails_fetched: Optional[int] = None,
-                        emails_processed: Optional[int] = None, apps_created: Optional[int] = None,
-                        status: str = "running"):
-        """Update progress for a running sync without setting finished_at."""
-        db.execute(
-            """UPDATE sync_logs
-               SET emails_fetched = COALESCE(?, emails_fetched),
-                   emails_processed = COALESCE(?, emails_processed),
-                   apps_created = COALESCE(?, apps_created),
-                   status = ?
-               WHERE id = ?""",
-            (emails_fetched, emails_processed, apps_created, status, log_id)
-        )
-        db.commit()
-
-    @staticmethod
-    def get_latest(db: Database) -> Optional[Dict[str, Any]]:
-        """Get the latest sync log entry."""
-        cursor = db.execute(
-            "SELECT * FROM sync_logs ORDER BY created_at DESC LIMIT 1"
-        )
-        row = cursor.fetchone()
-        return dict(row) if row else None
-
-    @staticmethod
-    def get_running(db: Database) -> Optional[Dict[str, Any]]:
-        """Get the most recent running sync log entry."""
-        cursor = db.execute(
-            "SELECT * FROM sync_logs WHERE status = 'running' ORDER BY created_at DESC LIMIT 1"
-        )
-        row = cursor.fetchone()
-        return dict(row) if row else None
-
-    @staticmethod
-    def get_recent(db: Database, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent sync logs."""
-        cursor = db.execute(
-            "SELECT * FROM sync_logs ORDER BY created_at DESC LIMIT ?",
-            (limit,)
-        )
-        return [dict(row) for row in cursor.fetchall()]

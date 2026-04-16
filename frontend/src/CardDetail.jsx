@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react'
-import { getApplicationEmails, getApplicationInteractions, createInteraction } from './api'
+import { getApplicationInteractions, createInteraction } from './api'
 import { AddInteraction } from './AddInteraction'
 
 export function CardDetail({ application, isOpen, onClose }) {
-  const [emails, setEmails] = useState([])
   const [interactions, setInteractions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState('emails')
   const [showAddInteraction, setShowAddInteraction] = useState(false)
 
   useEffect(() => {
@@ -20,11 +18,7 @@ export function CardDetail({ application, isOpen, onClose }) {
     setLoading(true)
     setError(null)
     try {
-      const [emailsRes, interactionsRes] = await Promise.all([
-        getApplicationEmails(application.id),
-        getApplicationInteractions(application.id),
-      ])
-      setEmails(emailsRes.data || [])
+      const interactionsRes = await getApplicationInteractions(application.id)
       setInteractions(interactionsRes.data || [])
     } catch (err) {
       setError(err.message)
@@ -97,34 +91,19 @@ export function CardDetail({ application, isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b bg-muted/30 sticky top-20 z-40">
-          <div className="flex gap-2 px-4">
-            {['Emails', 'Interactions', 'Add Note'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => {
-                  if (tab === 'Add Note') {
-                    setShowAddInteraction(true)
-                  } else {
-                    setActiveTab(tab.toLowerCase())
-                  }
-                }}
-                className={`py-3 px-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.toLowerCase()
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+        {/* Add Note Button */}
+        <div className="border-b bg-muted/30 sticky top-20 z-40 p-4">
+          <button
+            onClick={() => setShowAddInteraction(true)}
+            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded font-medium hover:bg-primary/90 transition-colors"
+          >
+            + Add Interaction
+          </button>
         </div>
 
         {/* Content */}
         <div className="p-4">
-          {loading && !emails.length && !interactions.length && (
+          {loading && !interactions.length && (
             <div className="text-center text-muted-foreground py-8">
               Loading...
             </div>
@@ -136,67 +115,37 @@ export function CardDetail({ application, isOpen, onClose }) {
             </div>
           )}
 
-          {/* Emails Tab */}
-          {activeTab === 'emails' && (
-            <div className="space-y-3">
-              {emails.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  No emails linked to this application
-                </p>
-              ) : (
-                emails.map(email => (
-                  <div
-                    key={email.id}
-                    className="border rounded p-3 bg-card hover:bg-card/80 transition-colors"
-                  >
-                    <p className="font-medium text-sm text-foreground truncate">
-                      {email.subject}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      From: {email.sender}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(email.date_received).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-
-          {/* Interactions Tab */}
-          {activeTab === 'interactions' && (
-            <div className="space-y-3">
-              {interactions.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">
-                  No interactions recorded
-                </p>
-              ) : (
-                interactions.map(interaction => (
-                  <div
-                    key={interaction.id}
-                    className="border-l-2 border-primary pl-3 py-2"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-foreground capitalize">
-                          {interaction.type.replace('_', ' ')}
-                        </p>
-                        {interaction.content && (
-                          <p className="text-sm text-foreground mt-1">
-                            {interaction.content}
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(interaction.occurred_at).toLocaleDateString()}
+          {/* Interactions */}
+          <div className="space-y-3">
+            {interactions.length === 0 ? (
+              <p className="text-muted-foreground text-sm py-8 text-center">
+                No interactions recorded yet
+              </p>
+            ) : (
+              interactions.map(interaction => (
+                <div
+                  key={interaction.id}
+                  className="border-l-2 border-primary pl-3 py-2"
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm text-foreground capitalize">
+                        {interaction.type.replace('_', ' ')}
                       </p>
+                      {interaction.content && (
+                        <p className="text-sm text-foreground mt-1">
+                          {interaction.content}
+                        </p>
+                      )}
                     </div>
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(interaction.occurred_at).toLocaleDateString()}
+                    </p>
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Add Interaction Modal */}
