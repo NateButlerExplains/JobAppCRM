@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getApplicationPrep, researchCompany, generateInterviewPrep } from './api'
+import { researchCompanyPrep, generateInterviewQuestions } from './api'
 import { saveInterviewPrepSession } from './interviewPrepStorage'
 import { X, ChevronDown } from 'lucide-react'
 
@@ -41,30 +41,18 @@ export function InterviewPrepModal({ application, isOpen, onClose }) {
   const [generatingQuestions, setGeneratingQuestions] = useState(false)
   const [error, setError] = useState(null)
 
-  // Load prep data on mount
+  // Initialize with application data
   useEffect(() => {
-    if (isOpen && application) {
-      loadPrepData()
+    if (isOpen && application?.company_website) {
+      setCompanyWebsite(application.company_website)
     }
-  }, [isOpen, application?.id])
-
-  const loadPrepData = async () => {
-    try {
-      setLoading(true)
-      const res = await getApplicationPrep(application.id)
-      setPrep(res.data)
-    } catch (err) {
-      logger.error('Error loading prep:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [isOpen, application?.company_website])
 
   const handleResearch = async () => {
     setResearching(true)
     setError(null)
     try {
-      const res = await researchCompany(application.id, { company_website: companyWebsite || undefined })
+      const res = await researchCompanyPrep(application.id, { company_website: companyWebsite || undefined })
       setPrep(res.data)
     } catch (err) {
       setError(err.message || 'Failed to research company')
@@ -77,11 +65,11 @@ export function InterviewPrepModal({ application, isOpen, onClose }) {
     setGeneratingQuestions(true)
     setError(null)
     try {
-      const res = await generateInterviewPrep(application.id)
-      setPrep(res.data)
+      const res = await generateInterviewQuestions(application.id)
+      setPrep(prev => ({ ...prev, ...res.data }))
       // Save session
       if (prep?.company_research) {
-        saveInterviewPrepSession(application.id, application.company_name, application.job_title, prep.company_research, res.data.interview_questions)
+        saveInterviewPrepSession(application.id, application.company_name, application.job_title, prep.company_research, res.data.questions)
       }
     } catch (err) {
       setError(err.message || 'Failed to generate questions')
@@ -167,7 +155,11 @@ export function InterviewPrepModal({ application, isOpen, onClose }) {
   ]
 
   const questionsByCategory = interviewQuestions
-    ? Object.groupBy(interviewQuestions, q => q.category)
+    ? interviewQuestions.reduce((acc, q) => {
+        if (!acc[q.category]) acc[q.category] = []
+        acc[q.category].push(q)
+        return acc
+      }, {})
     : {}
 
   return (
