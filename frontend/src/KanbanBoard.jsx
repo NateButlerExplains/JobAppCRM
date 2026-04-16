@@ -25,10 +25,11 @@ const COLUMNS = [
   { id: 'Interview Started', label: 'Interview Started' },
   { id: 'Denied', label: 'Denied' },
   { id: 'Offered', label: 'Offered' },
+  { id: 'Archived', label: 'Trash', isTrash: true },
 ]
 
 // Draggable card wrapper
-function SortableCard({ id, application, hasSuggestion, onClick }) {
+function SortableCard({ id, application, hasSuggestion, onClick, onDelete, isArchived }) {
   const {
     attributes,
     listeners,
@@ -56,6 +57,8 @@ function SortableCard({ id, application, hasSuggestion, onClick }) {
         application={application}
         hasSuggestion={hasSuggestion}
         onClick={onClick}
+        onDelete={onDelete}
+        isArchived={isArchived}
       />
     </div>
   )
@@ -75,7 +78,7 @@ function DraggingCardOverlay({ application, hasSuggestion }) {
 }
 
 // Column container
-function KanbanColumn({ column, items, suggestions, onCardClick }) {
+function KanbanColumn({ column, items, suggestions, onCardClick, onDelete }) {
   const { setNodeRef } = useSortable({
     id: column.id,
     data: {
@@ -85,13 +88,16 @@ function KanbanColumn({ column, items, suggestions, onCardClick }) {
   })
 
   const suggestionsMap = new Map(suggestions.map(s => [s.application_id, true]))
+  const isArchived = column.isTrash
 
   return (
     <div className="flex flex-col gap-4 min-h-[500px]">
       <h2 className="font-semibold text-lg text-foreground">{column.label}</h2>
       <div
         ref={setNodeRef}
-        className="space-y-3 flex-1 bg-muted/30 rounded p-4 min-h-[450px]"
+        className={`space-y-3 flex-1 rounded p-4 min-h-[450px] ${
+          isArchived ? 'bg-destructive/5 border border-destructive/20' : 'bg-muted/30'
+        }`}
       >
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {items.map(app => (
@@ -101,6 +107,8 @@ function KanbanColumn({ column, items, suggestions, onCardClick }) {
               application={app}
               hasSuggestion={suggestionsMap.has(app.id)}
               onClick={() => onCardClick(app)}
+              onDelete={onDelete}
+              isArchived={isArchived}
             />
           ))}
         </SortableContext>
@@ -143,6 +151,60 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
   // Track drag start
   const handleDragStart = (event) => {
     setActiveId(event.active.id)
+  }
+
+  // Handle delete/archive
+  const handleDelete = async (appId) => {
+    const app = applications.find(a => a.id === appId)
+    if (!app) return
+
+    const newStatus = app.status === 'Archived' ? null : 'Archived'
+
+    if (!newStatus) {
+      // Permanently delete archived items
+      if (!window.confirm('Permanently delete this application?')) return
+    }
+
+    const previousItems = { ...items }
+    const newItems = { ...items }
+
+    // Remove from old column
+    newItems[app.status] = newItems[app.status].filter(a => a.id !== appId)
+
+    // Add to new column if not deleting
+    if (newStatus) {
+      newItems[newStatus] = [...(newItems[newStatus] || []), { ...app, status: newStatus }]
+    }
+
+    setItems(newItems)
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (newStatus) {
+        // Archive the item
+        await updateApplication(appId, { status: newStatus })
+        const updatedApps = applications.map(a =>
+          a.id === appId ? { ...a, status: newStatus } : a
+        )
+        onApplicationsChange(updatedApps)
+      } else {
+        // Permanently delete
+        const response = await fetch(`http://localhost:5001/api/applications/${appId}`, {
+          method: 'DELETE',
+        })
+        if (!response.ok) throw new Error('Failed to delete application')
+
+        const updatedApps = applications.filter(a => a.id !== appId)
+        onApplicationsChange(updatedApps)
+      }
+    } catch (err) {
+      setItems(previousItems)
+      setError(`Failed to delete application: ${err.message}`)
+      console.error('Error deleting application:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Update local state when applications change
@@ -214,7 +276,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-5 gap-6 overflow-x-auto pb-4">
+        <div className="grid grid-cols-6 gap-6 overflow-x-auto pb-4">
           {COLUMNS.map(column => (
             <KanbanColumn
               key={column.id}
@@ -222,6 +284,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
               items={items[column.id] || []}
               suggestions={suggestions}
               onCardClick={onCardClick}
+              onDelete={handleDelete}
             />
           ))}
         </div>

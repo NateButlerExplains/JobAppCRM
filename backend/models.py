@@ -39,7 +39,7 @@ class Database:
             job_url TEXT,
             date_submitted DATE NOT NULL,
             status TEXT NOT NULL DEFAULT 'Submitted'
-                CHECK(status IN ('Submitted', 'More Info Required', 'Interview Started', 'Denied', 'Offered')),
+                CHECK(status IN ('Submitted', 'More Info Required', 'Interview Started', 'Denied', 'Offered', 'Archived')),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
