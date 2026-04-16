@@ -3,7 +3,11 @@ import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file (look in parent directory)
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
+
+# Also try current directory
 load_dotenv()
 
 # Configuration class
@@ -24,6 +28,12 @@ class Config:
     # Gemini API
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
+    # Email sync
+    EMAIL_SYNC_DAYS_BACK = int(os.getenv("EMAIL_SYNC_DAYS_BACK", "7"))
+    STARTUP_SYNC_THRESHOLD_HOURS = int(os.getenv("STARTUP_SYNC_THRESHOLD_HOURS", "4"))
+    SYNC_SCHEDULE_HOUR = int(os.getenv("SYNC_SCHEDULE_HOUR", "2"))
+    SYNC_SCHEDULE_MINUTE = int(os.getenv("SYNC_SCHEDULE_MINUTE", "0"))
 
 
 def setup_logging():

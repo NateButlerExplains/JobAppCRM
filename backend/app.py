@@ -30,8 +30,10 @@ CORS(app, resources={
         "origins": [
             "http://localhost:3000",
             "http://localhost:3001",
+            "http://localhost:3002",
             "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001"
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:3002"
         ],
         "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type"],
@@ -74,7 +76,7 @@ def sync_emails_job():
     current_sync["log_id"] = None
     try:
         processor = EmailProcessor(db, cancel_event=cancel_event)
-        stats = processor.process_emails(days_back=Config.EMAIL_SYNC_DAYS_BACK)
+        stats = processor.process_emails(days_back=getattr(Config, 'EMAIL_SYNC_DAYS_BACK', 7))
         logger.info(f"Email sync completed: {stats}")
     except Exception as e:
         logger.error(f"Email sync failed: {e}")
