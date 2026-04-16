@@ -83,18 +83,17 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-8 py-12">
-          <div className="flex justify-between items-start gap-8 mb-8">
+        <div className="w-full px-8 py-8">
+          <div className="flex justify-between items-center gap-8 mb-4">
             <div>
-              <h1 className="text-5xl font-black uppercase tracking-tight text-white" style={{ letterSpacing: '2px' }}>
+              <h1 className="text-4xl font-black uppercase tracking-tight text-white" style={{ letterSpacing: '2px' }}>
                 Job CRM
               </h1>
-              <p className="text-slate-400 text-sm mt-3 font-medium uppercase tracking-widest" style={{ letterSpacing: '0.5px' }}>Track Your Pipeline</p>
             </div>
             {currentPage === 'dashboard' && (
               <button
                 onClick={() => setShowNewAppForm(true)}
-                className="px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-sm transition-colors border-0 shadow-lg hover:shadow-blue-500/50"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
                 style={{ letterSpacing: '0.5px', borderRadius: '0px' }}
               >
                 + New Application
@@ -103,10 +102,10 @@ function App() {
           </div>
 
           {/* Navigation */}
-          <div className="flex gap-8 border-t border-slate-800 pt-6">
+          <div className="flex gap-6 border-t border-slate-800 pt-3">
             <button
               onClick={() => setCurrentPage('dashboard')}
-              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-4 border-b-2 ${
+              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-3 border-b-2 ${
                 currentPage === 'dashboard'
                   ? 'text-blue-400 border-blue-400'
                   : 'text-slate-500 border-transparent hover:text-slate-300'
@@ -117,7 +116,7 @@ function App() {
             </button>
             <button
               onClick={() => setCurrentPage('settings')}
-              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-4 border-b-2 ${
+              className={`font-bold uppercase text-xs tracking-widest transition-colors pb-3 border-b-2 ${
                 currentPage === 'settings'
                   ? 'text-blue-400 border-blue-400'
                   : 'text-slate-500 border-transparent hover:text-slate-300'
@@ -132,12 +131,12 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        <div className="flex-1 max-w-7xl mx-auto w-full px-8 py-12">
+        <div className="flex-1 w-full px-8 py-8">
           {currentPage === 'settings' && <Settings />}
           {currentPage === 'dashboard' && (
             <>
               {/* Stats Bar */}
-              <div className="grid grid-cols-5 gap-6 mb-16 border-b border-slate-800 pb-12">
+              <div className="grid grid-cols-5 gap-6 mb-10 border-b border-slate-800 pb-8">
                 {[
                   { label: 'Submitted', value: stats.Submitted || 0 },
                   { label: 'More Info', value: stats['More Info Required'] || 0 },
