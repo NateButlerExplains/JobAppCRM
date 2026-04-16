@@ -57,6 +57,10 @@ class Database:
             ("salary_negotiation_target", "REAL"),
             ("employment_type", "TEXT"),
             ("pay_type", "TEXT"),
+            ("work_arrangement", "TEXT"),
+            ("work_arrangement_notes", "TEXT"),
+            ("company_website", "TEXT"),
+            ("notes", "TEXT"),
         ]
         for col_name, col_type in new_cols:
             try:
@@ -135,15 +139,19 @@ class Application:
                company_domain: Optional[str] = None, job_url: Optional[str] = None,
                employment_type: Optional[str] = None, pay_type: Optional[str] = None,
                salary_min: Optional[float] = None, salary_max: Optional[float] = None,
-               salary_negotiation_target: Optional[float] = None) -> int:
+               salary_negotiation_target: Optional[float] = None,
+               work_arrangement: Optional[str] = None, work_arrangement_notes: Optional[str] = None,
+               company_website: Optional[str] = None, notes: Optional[str] = None) -> int:
         """Create a new application."""
         cursor = db.execute(
             """INSERT INTO applications
                (company_name, company_domain, job_title, job_url, date_submitted,
-                employment_type, pay_type, salary_min, salary_max, salary_negotiation_target)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                employment_type, pay_type, salary_min, salary_max, salary_negotiation_target,
+                work_arrangement, work_arrangement_notes, company_website, notes)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (company_name, company_domain, job_title, job_url, date_submitted,
-             employment_type, pay_type, salary_min, salary_max, salary_negotiation_target)
+             employment_type, pay_type, salary_min, salary_max, salary_negotiation_target,
+             work_arrangement, work_arrangement_notes, company_website, notes)
         )
         db.commit()
         return cursor.lastrowid
@@ -176,7 +184,8 @@ class Application:
         allowed = {
             'company_name', 'job_title', 'job_url', 'company_domain', 'status',
             'salary_min', 'salary_max', 'salary_negotiation_target',
-            'employment_type', 'pay_type',
+            'employment_type', 'pay_type', 'work_arrangement', 'work_arrangement_notes',
+            'company_website', 'notes',
         }
         updates = {k: v for k, v in fields.items() if k in allowed}
         if not updates:

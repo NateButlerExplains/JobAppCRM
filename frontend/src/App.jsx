@@ -5,6 +5,7 @@ import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
 import { Settings } from './Settings'
 import { InterviewPrepHistory } from './InterviewPrepHistory'
+import { InterviewPrepModal } from './InterviewPrepModal'
 import './App.css'
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
   const [showCardDetail, setShowCardDetail] = useState(false)
   const [showNewAppForm, setShowNewAppForm] = useState(false)
   const [currentPage, setCurrentPage] = useState('dashboard')
+  const [interviewPrepApp, setInterviewPrepApp] = useState(null)
 
   useEffect(() => {
     loadData()
@@ -56,6 +58,12 @@ function App() {
       newStats[app.status] = (newStats[app.status] || 0) + 1
     })
     setStats(newStats)
+  }
+
+  const handleNavToInterview = (app) => {
+    setInterviewPrepApp(app)
+    setShowCardDetail(false)
+    setCurrentPage('interview-prep')
   }
 
   if (loading && currentPage === 'dashboard') {
@@ -156,7 +164,21 @@ function App() {
       <main className="flex-1 flex flex-col">
         <div className="flex-1 w-full px-8 py-8">
           {currentPage === 'settings' && <Settings />}
-          {currentPage === 'interview-prep' && <InterviewPrepHistory />}
+          {currentPage === 'interview-prep' && (
+            <>
+              {interviewPrepApp && (
+                <InterviewPrepModal
+                  application={interviewPrepApp}
+                  isOpen={true}
+                  onClose={() => {
+                    setInterviewPrepApp(null)
+                    setCurrentPage('dashboard')
+                  }}
+                />
+              )}
+              {!interviewPrepApp && <InterviewPrepHistory />}
+            </>
+          )}
           {currentPage === 'dashboard' && (
             <>
               {/* Stats Bar */}
@@ -212,6 +234,7 @@ function App() {
         onSave={() => {
           loadData()
         }}
+        onNavToInterview={handleNavToInterview}
       />
 
       {/* New Application Form Modal */}

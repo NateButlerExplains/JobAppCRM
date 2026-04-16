@@ -4,13 +4,14 @@ import { AddInteraction } from './AddInteraction'
 import { X } from 'lucide-react'
 
 const STATUSES = ['Submitted', 'More Info Required', 'Interview Started', 'Denied', 'Offered', 'Archived']
+const WORK_ARRANGEMENTS = ['Remote', 'Hybrid', 'On-Site']
 
 function fmt(val) {
   if (!val) return '—'
   return '$' + Number(val).toLocaleString()
 }
 
-export function CardDetail({ application, isOpen, onClose, onSave }) {
+export function CardDetail({ application, isOpen, onClose, onSave, onNavToInterview = () => {} }) {
   const [interactions, setInteractions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -124,6 +125,12 @@ export function CardDetail({ application, isOpen, onClose, onSave }) {
                       className="w-full px-3 py-2 bg-slate-800 border border-slate-600 text-white text-sm" style={{ borderRadius: '0px' }} />
                   </div>
 
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Company Website</label>
+                    <input type="text" value={editData.company_website || ''} onChange={e => setEditData({...editData, company_website: e.target.value})}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 text-white text-sm" style={{ borderRadius: '0px' }} />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Status</label>
                     <select value={editData.status || ''} onChange={e => setEditData({...editData, status: e.target.value})}
@@ -153,7 +160,29 @@ export function CardDetail({ application, isOpen, onClose, onSave }) {
                     </select>
                   </div>
 
-                  <div></div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Work Arrangement</label>
+                    <select value={editData.work_arrangement || ''} onChange={e => setEditData({...editData, work_arrangement: e.target.value || null})}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 text-white text-sm" style={{ borderRadius: '0px' }}>
+                      <option value="">Not set</option>
+                      {WORK_ARRANGEMENTS.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
+                  </div>
+
+                  {editData.work_arrangement === 'Hybrid' && (
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Hybrid Details</label>
+                      <input type="text" value={editData.work_arrangement_notes || ''} onChange={e => setEditData({...editData, work_arrangement_notes: e.target.value})}
+                        placeholder="e.g., 3 days office / 2 remote" className="w-full px-3 py-2 bg-slate-800 border border-slate-600 text-white text-sm" style={{ borderRadius: '0px' }} />
+                    </div>
+                  )}
+
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">Notes</label>
+                    <textarea value={editData.notes || ''} onChange={e => setEditData({...editData, notes: e.target.value})}
+                      placeholder="Any additional notes about this opportunity..." rows="3"
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 text-white text-sm" style={{ borderRadius: '0px' }} />
+                  </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-400 mb-1 uppercase">{isHourly ? 'Min Hourly Rate' : 'Salary Min'}</label>
@@ -231,9 +260,9 @@ export function CardDetail({ application, isOpen, onClose, onSave }) {
                     className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-sm transition-colors" style={{ borderRadius: '0px' }}>
                     ✎ Edit
                   </button>
-                  <button onClick={() => setShowAddInteraction(true)}
+                  <button onClick={() => onNavToInterview(application)}
                     className="flex-1 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase text-sm transition-colors" style={{ borderRadius: '0px' }}>
-                    + Note
+                    📚 Interview Prep
                   </button>
                 </div>
 

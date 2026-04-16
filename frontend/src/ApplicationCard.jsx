@@ -79,14 +79,19 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
         </div>
       )}
 
-      {/* Employment type badge */}
-      {application.employment_type && (
-        <div className="mb-3">
-          <span className="inline-block px-2 py-0.5 text-xs font-bold uppercase border border-slate-600 text-slate-400" style={{ letterSpacing: '0.5px' }}>
+      {/* Employment type + Work arrangement */}
+      <div className="mb-3 space-y-1">
+        {application.employment_type && (
+          <span className="inline-block px-2 py-0.5 text-xs font-bold uppercase border border-slate-600 text-slate-400 mr-1" style={{ letterSpacing: '0.5px' }}>
             {application.employment_type}
           </span>
-        </div>
-      )}
+        )}
+        {application.work_arrangement && (
+          <span className="inline-block px-2 py-0.5 text-xs font-bold uppercase border border-slate-600 text-slate-400" style={{ letterSpacing: '0.5px' }}>
+            {application.work_arrangement === 'Hybrid' && application.work_arrangement_notes ? `${application.work_arrangement} (${application.work_arrangement_notes})` : application.work_arrangement}
+          </span>
+        )}
+      </div>
 
       {/* Suggestion badge */}
       {hasSuggestion && (

@@ -9,6 +9,7 @@ export function InterviewPrepModal({ application, isOpen, onClose }) {
   const [questions, setQuestions] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [companyWebsite, setCompanyWebsite] = useState(application?.company_website || '')
 
   if (!isOpen || !application) return null
 
@@ -18,7 +19,7 @@ export function InterviewPrepModal({ application, isOpen, onClose }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await researchCompanyPrep(application.id)
+      const res = await researchCompanyPrep(application.id, { company_website: companyWebsite || undefined })
       setResearch(res.data)
       setStep('research')
     } catch (err) {
@@ -94,6 +95,18 @@ export function InterviewPrepModal({ application, isOpen, onClose }) {
                       <a href={application.job_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 font-medium">
                         Link
                       </a>
+                    </div>
+                    <div className="border-t border-slate-700 pt-3">
+                      <label className="block text-slate-400 text-sm mb-2">Company Website (for research):</label>
+                      <input
+                        type="url"
+                        value={companyWebsite}
+                        onChange={e => setCompanyWebsite(e.target.value)}
+                        placeholder="https://company.com"
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-600 text-white text-sm"
+                        style={{ borderRadius: '0px' }}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">Optional: Enter the company website to get deeper research insights</p>
                     </div>
                   </div>
                 </div>

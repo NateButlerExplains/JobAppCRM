@@ -8,11 +8,15 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
     job_title: '',
     date_submitted: new Date().toISOString().split('T')[0],
     job_url: '',
+    company_website: '',
     employment_type: '',
     pay_type: '',
     salary_min: '',
     salary_max: '',
     salary_negotiation_target: '',
+    work_arrangement: '',
+    work_arrangement_notes: '',
+    notes: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -35,16 +39,21 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
         job_title: formData.job_title.trim(),
         date_submitted: formData.date_submitted,
         job_url: formData.job_url || null,
+        company_website: formData.company_website || null,
         employment_type: formData.employment_type || null,
         pay_type: formData.pay_type || null,
         salary_min: formData.salary_min ? parseFloat(formData.salary_min) : null,
         salary_max: formData.salary_max ? parseFloat(formData.salary_max) : null,
         salary_negotiation_target: formData.salary_negotiation_target ? parseFloat(formData.salary_negotiation_target) : null,
+        work_arrangement: formData.work_arrangement || null,
+        work_arrangement_notes: formData.work_arrangement_notes || null,
+        notes: formData.notes || null,
       })
       setFormData({
         company_name: '', job_title: '', date_submitted: new Date().toISOString().split('T')[0],
-        job_url: '', employment_type: '', pay_type: '',
+        job_url: '', company_website: '', employment_type: '', pay_type: '',
         salary_min: '', salary_max: '', salary_negotiation_target: '',
+        work_arrangement: '', work_arrangement_notes: '', notes: '',
       })
       if (onSuccess) onSuccess(response.data)
       onClose()
@@ -97,6 +106,34 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
                 <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Job URL <span className="text-slate-600 normal-case font-normal">(optional)</span></label>
                 <input type="text" value={formData.job_url} onChange={set('job_url')}
                   placeholder="https://..." className={inputClass} style={{ borderRadius: '0px' }} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Company Website <span className="text-slate-600 normal-case font-normal">(optional)</span></label>
+                <input type="text" value={formData.company_website} onChange={set('company_website')}
+                  placeholder="https://www..." className={inputClass} style={{ borderRadius: '0px' }} />
+              </div>
+            </div>
+
+            <div className="border-t border-slate-700 pt-5 space-y-4">
+              <p className="text-xs font-bold text-slate-400 uppercase">Work Arrangement</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Type</label>
+                  <select value={formData.work_arrangement} onChange={set('work_arrangement')}
+                    className={inputClass} style={{ borderRadius: '0px' }}>
+                    <option value="">Not set</option>
+                    <option value="Remote">Remote</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="On-Site">On-Site</option>
+                  </select>
+                </div>
+                {formData.work_arrangement === 'Hybrid' && (
+                  <div className="col-span-2">
+                    <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Details <span className="text-slate-600 normal-case font-normal">(e.g., "3 days office/2 remote")</span></label>
+                    <input type="text" value={formData.work_arrangement_notes} onChange={set('work_arrangement_notes')}
+                      placeholder="e.g., 3 days office / 2 remote" className={inputClass} style={{ borderRadius: '0px' }} />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -152,6 +189,13 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="border-t border-slate-700 pt-5">
+              <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase">Notes <span className="text-slate-600 normal-case font-normal">(optional)</span></label>
+              <textarea value={formData.notes} onChange={set('notes')}
+                placeholder="Any additional notes about this opportunity..." rows="3"
+                className={inputClass} style={{ borderRadius: '0px' }} />
             </div>
 
             {error && (

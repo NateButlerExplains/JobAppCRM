@@ -61,6 +61,10 @@ def create_application():
             salary_min=data.get("salary_min"),
             salary_max=data.get("salary_max"),
             salary_negotiation_target=data.get("salary_negotiation_target"),
+            work_arrangement=data.get("work_arrangement"),
+            work_arrangement_notes=data.get("work_arrangement_notes"),
+            company_website=data.get("company_website"),
+            notes=data.get("notes"),
         )
 
         app = Application.get_by_id(db, app_id)
@@ -212,6 +216,10 @@ def research_company_prep(app_id):
         if not app:
             return jsonify({"error": "Application not found"}), 404
 
+        # Get optional company website from request body
+        data = request.get_json() or {}
+        company_website = data.get("company_website")
+
         # Validate core trio
         if not app.get("company_name") or not app.get("company_name").strip():
             return jsonify({"error": "Company name is required"}), 400
@@ -220,7 +228,7 @@ def research_company_prep(app_id):
         if not app.get("job_url") or not app.get("job_url").strip():
             return jsonify({"error": "Job URL is required"}), 400
 
-        # Mock research data (in production, would call Gemini)
+        # Mock research data (in production, would call Gemini with company_website if provided)
         research = {
             "company_overview": f"Leading company in the tech industry - {app['company_name']}",
             "key_products": ["Product 1", "Product 2", "Product 3"],
