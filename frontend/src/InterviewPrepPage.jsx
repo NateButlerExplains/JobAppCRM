@@ -338,76 +338,81 @@ ${companyResearch?.hiring_focus || 'N/A'}`
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>
-                Company Research
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Last updated: {new Date(prep.updated_at).toLocaleString()}
-              </p>
-              {companyResearch.fallback_fields && companyResearch.fallback_fields.length > 0 && (
-                <p className="text-xs text-purple-400 mt-1">
-                  🧠 Some info from Gemini knowledge base: {companyResearch.fallback_fields.map(f => f.replace(/_/g, ' ')).join(', ')}
-                </p>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleCopyResearch}
-                className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase text-xs transition-colors"
-                style={{ borderRadius: '0px' }}
-              >
-                📋 Copy
-              </button>
-              {!interviewQuestions && (
+          {/* Only show research content if not in error state */}
+          {companyResearch?.data_source !== 'error' && (
+            <>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>
+                    Company Research
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Last updated: {new Date(prep.updated_at).toLocaleString()}
+                  </p>
+                  {companyResearch.fallback_fields && companyResearch.fallback_fields.length > 0 && (
+                    <p className="text-xs text-purple-400 mt-1">
+                      🧠 Some info from Gemini knowledge base: {companyResearch.fallback_fields.map(f => f.replace(/_/g, ' ')).join(', ')}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleCopyResearch}
+                    className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase text-xs transition-colors"
+                    style={{ borderRadius: '0px' }}
+                  >
+                    📋 Copy
+                  </button>
+                  {!interviewQuestions && (
+                    <button
+                      onClick={handleGenerateQuestions}
+                      disabled={generatingQuestions}
+                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ borderRadius: '0px' }}
+                    >
+                      {generatingQuestions ? '⟳ Generating...' : 'Generate Questions'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 mb-3">
                 <button
-                  onClick={handleGenerateQuestions}
-                  disabled={generatingQuestions}
-                  className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`px-4 py-2 font-bold uppercase text-sm transition-colors ${
+                    isEditing
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-slate-700 hover:bg-slate-600 text-white'
+                  }`}
                   style={{ borderRadius: '0px' }}
                 >
-                  {generatingQuestions ? '⟳ Generating...' : 'Generate Questions'}
+                  {isEditing ? '✓ Done Editing' : '✏️ Edit Missing Fields'}
                 </button>
-              )}
-            </div>
-          </div>
+              </div>
 
-          <div className="flex gap-2 mb-3">
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              className={`px-4 py-2 font-bold uppercase text-sm transition-colors ${
-                isEditing
-                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                  : 'bg-slate-700 hover:bg-slate-600 text-white'
-              }`}
-              style={{ borderRadius: '0px' }}
-            >
-              {isEditing ? '✓ Done Editing' : '✏️ Edit Missing Fields'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {researchTiles.map((tile, i) => {
-              const isEmpty = !tile.content
-              return (
-                <ResearchTile
-                  key={i}
-                  title={tile.title}
-                  icon={tile.icon}
-                  content={tile.content}
-                  loading={researching}
-                  isEmpty={isEmpty}
-                  isEditing={isEditing && isEmpty}
-                  fieldValue={editedFields[tile.fieldKey] || ''}
-                  onFieldChange={e => setEditedFields({...editedFields, [tile.fieldKey]: e.target.value})}
-                  onEdit={() => console.log(`Saved ${tile.fieldKey}:`, editedFields[tile.fieldKey])}
-                  isFromFallback={isFromFallback(tile.fieldKey)}
-                  isError={companyResearch?.data_source === 'error'}
-                />
-              )
-            })}
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {researchTiles.map((tile, i) => {
+                  const isEmpty = !tile.content
+                  return (
+                    <ResearchTile
+                      key={i}
+                      title={tile.title}
+                      icon={tile.icon}
+                      content={tile.content}
+                      loading={researching}
+                      isEmpty={isEmpty}
+                      isEditing={isEditing && isEmpty}
+                      fieldValue={editedFields[tile.fieldKey] || ''}
+                      onFieldChange={e => setEditedFields({...editedFields, [tile.fieldKey]: e.target.value})}
+                      onEdit={() => console.log(`Saved ${tile.fieldKey}:`, editedFields[tile.fieldKey])}
+                      isFromFallback={isFromFallback(tile.fieldKey)}
+                      isError={false}
+                    />
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="bg-slate-800/50 border border-slate-700 p-8 text-center">
