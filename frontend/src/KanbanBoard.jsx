@@ -94,13 +94,12 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPre
 
   return (
     <div className="flex flex-col gap-8 min-h-[600px] w-full">
-      <div className={`font-black text-xl uppercase flex items-center gap-3 pb-4 border-b-2 truncate ${
+      <div className={`font-black text-xl uppercase pb-4 border-b-2 ${
         isArchived
           ? 'text-red-500 border-red-500'
           : 'text-white border-slate-600'
       }`} style={{ letterSpacing: '1px' }}>
         {column.label}
-        <span className="ml-auto text-slate-500 font-normal text-sm lowercase whitespace-nowrap" style={{ letterSpacing: '0px' }}>{items.length} items</span>
       </div>
       <div
         ref={setNodeRef}
