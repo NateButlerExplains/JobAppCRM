@@ -48,12 +48,14 @@ function App() {
   }
 
   const handleApplicationsChange = (updatedApps) => {
+    console.log(`[App.handleApplicationsChange] Received ${updatedApps.length} apps`)
     setApplications(updatedApps)
     // Recalculate stats after changes
     const newStats = {}
     updatedApps.forEach(app => {
       newStats[app.status] = (newStats[app.status] || 0) + 1
     })
+    console.log(`[App.handleApplicationsChange] New stats:`, newStats)
     setStats(newStats)
   }
 

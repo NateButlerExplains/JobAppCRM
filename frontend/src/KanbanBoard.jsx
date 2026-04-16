@@ -153,20 +153,21 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
   )
 
   // Group applications by status
-  const columnItems = useCallback(() => {
+  const getColumnItems = () => {
     const grouped = {}
     COLUMNS.forEach(col => {
       grouped[col.id] = applications.filter(app => app.status === col.id)
     })
     return grouped
-  }, [applications])
+  }
 
-  const [items, setItems] = useState(columnItems())
+  const [items, setItems] = useState(getColumnItems())
 
   // Sync items when applications change
   useEffect(() => {
-    setItems(columnItems())
-  }, [applications, columnItems])
+    console.log(`[useEffect] applications changed:`, applications.length, 'apps')
+    setItems(getColumnItems())
+  }, [applications])
 
   // Track drag start
   const handleDragStart = (event) => {
@@ -179,6 +180,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
     if (!app) return
 
     const newStatus = app.status === 'Archived' ? null : 'Archived'
+    console.log(`[Delete] App ${appId}: ${app.status} → ${newStatus}`)
 
     if (!newStatus) {
       // Permanently delete archived items
@@ -196,6 +198,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
       newItems[newStatus] = [...(newItems[newStatus] || []), { ...app, status: newStatus }]
     }
 
+    console.log(`[Delete] Optimistic update:`, newItems)
     setItems(newItems)
     setLoading(true)
     setError(null)
@@ -203,10 +206,12 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
     try {
       if (newStatus) {
         // Archive the item
+        console.log(`[Delete] Calling updateApplication(${appId}, {status: ${newStatus}})`)
         await updateApplication(appId, { status: newStatus })
         const updatedApps = applications.map(a =>
           a.id === appId ? { ...a, status: newStatus } : a
         )
+        console.log(`[Delete] Calling onApplicationsChange with updated apps`)
         onApplicationsChange(updatedApps)
       } else {
         // Permanently delete
