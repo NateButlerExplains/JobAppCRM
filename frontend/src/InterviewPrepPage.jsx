@@ -7,11 +7,16 @@ function ResearchTile({ title, icon, content, loading, isEmpty, isEditing, field
 
   if (isEmpty && !isEditing) {
     return (
-      <div className="bg-slate-800/50 border-l-4 border-orange-500 p-4">
-        <p className="text-xs font-bold text-orange-400">
-          {icon} {title} ⚠️ UNABLE TO FIND
-        </p>
-        <p className="text-xs text-slate-500 mt-1">No data available. Click edit to add information.</p>
+      <div className="bg-slate-800/50 border border-slate-700 p-4">
+        <div className="flex justify-between items-start gap-2">
+          <div>
+            <p className="text-xs font-bold text-slate-400">
+              {icon} {title}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">No data available</p>
+          </div>
+          <span className="text-xs text-slate-500 cursor-pointer hover:text-slate-300">ℹ️</span>
+        </div>
       </div>
     )
   }

@@ -509,50 +509,59 @@ If you cannot determine the information, set it to null. The subject line is the
         if website_content:
             website_context = f"\n\nCompany website content (for reference):\n{website_content}"
 
-        prompt = f"""You are an expert research assistant. Research the following company and provide detailed, accurate information for interview preparation.
+        prompt = f"""You are an expert research assistant for interview preparation. Extract and synthesize information about this company.
 
 COMPANY INFO:
 - Company: {company_name}
 - Position: {job_title}
-- Company Website: {company_website or "Not provided"}
+- Website: {company_website or "Not provided"}
 - Job URL: {job_url}{website_context}
 
-INSTRUCTIONS:
-1. Respond with VALID, COMPLETE JSON only - no markdown code blocks, no explanations
-2. Fill in every field with actual information or null if not available
-3. Be accurate and specific
-4. Use website content if available
+CRITICAL INSTRUCTIONS:
+1. Extract EVERY piece of information from the website content provided
+2. Search specifically for: CEO name, founder names, leadership team, company founder/founders on the website
+3. If website content is provided, prioritize extracting from it; supplement with your knowledge for gaps
+4. MUST return valid JSON with all 8 fields (use null for truly unknown fields)
+5. For empty fields: DO NOT say "Unable to gather" - instead provide what you know or null
+6. NO markdown, NO code blocks, ONLY raw JSON
+7. Be thorough and specific - this is for interview preparation
 
-REQUIRED JSON RESPONSE FORMAT (EXACT - must include all fields):
+EXACT JSON RESPONSE FORMAT:
 {{
-  "company_overview": "2-3 sentence summary of company mission and focus",
-  "key_products": ["Product/service 1", "Product/service 2", "Key offering 3"],
-  "company_culture": "Description of company culture, values, and work environment",
-  "org_structure": "How the company is organized (teams, departments, reporting structure)",
-  "ceo_info": "CEO/founder name and brief background",
-  "recent_news": ["News item 1", "News item 2", "News item 3"],
-  "industry_relevance": "Why this company and industry matter, and current trends",
-  "hiring_focus": "What this company focuses on when hiring for {job_title} roles"
+  "company_overview": "2-3 sentence summary of what the company does and their mission",
+  "key_products": ["Product 1", "Service 1", "Offering 2"],
+  "company_culture": "Description of company values, work style, and environment",
+  "org_structure": "How departments are organized, reporting lines, main teams",
+  "ceo_info": "CEO/founder name and relevant background (search website for About Us, Leadership, Team sections)",
+  "recent_news": ["News 1", "Achievement 2", "Recent update"],
+  "industry_relevance": "Why this industry matters and how it's changing",
+  "hiring_focus": "What {job_title} roles focus on at {company_name}"
 }}
 
-Now provide the complete JSON response with all 8 fields filled in:"""
+RESPOND WITH ONLY THE JSON OBJECT, NOTHING ELSE:"""
 
         try:
             response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
                 temperature=0.5,
-                max_output_tokens=2000,
+                max_output_tokens=4000,
             ))
 
             logger.info(f"✅ Gemini API response received ({len(response.text)} chars)")
             result = self._extract_json(response.text)
 
-            if result and result.get("company_overview"):
+            if result is not None:
+                # JSON parsing succeeded - use the result even if some fields are null
+                logger.info(f"✅ Successfully parsed research data: {result}")
+
                 # Track which fields came from fallback
                 fallback_fields = []
 
-                # Check if we're missing key fields and try to fill them with pure Gemini knowledge
-                if not result.get("ceo_info") or not result.get("org_structure"):
-                    logger.info(f"📋 Missing CEO/Org info, trying pure knowledge fallback...")
+                # Only try fallback if we're MISSING CRITICAL FIELDS (not just company_overview is missing)
+                # Skip fallback if we already have company_overview and org_structure (primary data is good)
+                has_primary_data = result.get("company_overview") and result.get("org_structure")
+
+                if not has_primary_data and (not result.get("ceo_info") or not result.get("org_structure")):
+                    logger.info(f"📋 Missing key info, trying pure knowledge fallback...")
                     fallback_result = self._research_company_fallback(company_name)
                     if fallback_result:
                         if not result.get("ceo_info") and fallback_result.get("ceo_info"):
@@ -572,9 +581,10 @@ Now provide the complete JSON response with all 8 fields filled in:"""
                 result["fallback_fields"] = fallback_fields
                 return result
             else:
-                logger.warning(f"⚠️  Company research returned incomplete data: {result}")
+                # JSON parsing completely failed
+                logger.error(f"❌ Company research returned invalid JSON. Raw response: {response.text[:500]}")
                 return {
-                    "company_overview": f"Unable to gather detailed information about {company_name}",
+                    "company_overview": None,
                     "key_products": [],
                     "company_culture": None,
                     "org_structure": None,
@@ -631,7 +641,7 @@ If you don't have reliable information about a field, use null. Only include inf
         try:
             response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
                 temperature=0.3,
-                max_output_tokens=800,
+                max_output_tokens=1500,
             ))
 
             logger.info(f"✅ Fallback research response received ({len(response.text)} chars)")
