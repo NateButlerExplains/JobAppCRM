@@ -1446,13 +1446,25 @@ def research_company_prep(app_id):
             company_website=company_website
         )
 
-        # Save research to prep, including web_crawled and data_source flags
-        update_fields = {
-            "company_research": json.dumps(research_result),
-            "web_crawled": research_result.get("web_crawled", False),
-            "data_source": research_result.get("data_source", "gemini_knowledge")
-        }
-        InterviewPrep.update(db, prep["id"], update_fields)
+        # Only save research if it succeeded (has actual data, not error state)
+        if research_result.get("data_source") != "error" and (research_result.get("company_overview") or len(research_result.get("key_products", [])) > 0):
+            # Save successful research to prep
+            update_fields = {
+                "company_research": json.dumps(research_result),
+                "web_crawled": research_result.get("web_crawled", False),
+                "data_source": research_result.get("data_source", "gemini_knowledge")
+            }
+            InterviewPrep.update(db, prep["id"], update_fields)
+            logger.info(f"✅ Research data saved for {app['company_name']}")
+        else:
+            # Research failed (API error, quota exceeded, etc.) - don't overwrite existing data
+            logger.warning(f"⚠️  Research failed - not overwriting existing data. Reason: {research_result.get('data_source')}")
+            # If there's already good data from a previous research, return it
+            if prep.get("company_research"):
+                logger.info(f"Returning existing research data for {app['company_name']}")
+            else:
+                # No existing data and new research failed
+                return jsonify({"error": "Research failed (API error or quota exceeded). Please try again later."}), 500
 
         # Fetch updated prep
         updated_prep = InterviewPrep.get_by_id(db, prep["id"])
