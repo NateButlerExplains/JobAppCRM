@@ -26,7 +26,6 @@ const COLUMNS = [
   { id: 'Interview Started', label: 'Interview Started' },
   { id: 'Denied', label: 'Denied' },
   { id: 'Offered', label: 'Offered' },
-  { id: 'Archived', label: 'Trash', isTrash: true },
 ]
 
 // Draggable card wrapper
@@ -94,7 +93,7 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPre
 
   return (
     <div className="flex flex-col gap-8 min-h-[600px] w-full">
-      <div className={`font-black text-xl uppercase pb-4 border-b-2 ${
+      <div className={`font-black text-xl uppercase pb-4 border-b-2 text-center ${
         isArchived
           ? 'text-red-500 border-red-500'
           : 'text-white border-slate-600'
@@ -140,6 +139,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
   const [activeId, setActiveId] = useState(null)
   const [prepModalApp, setPrepModalApp] = useState(null)
   const [showPrepModal, setShowPrepModal] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -296,7 +296,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-6 gap-6 overflow-x-auto pb-4 w-full">
+        <div className="grid grid-cols-5 gap-6 overflow-x-auto pb-4 w-full">
           {COLUMNS.map(column => (
             <KanbanColumn
               key={column.id}
@@ -322,6 +322,44 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onApplicat
           )}
         </DragOverlay>
       </DndContext>
+
+      {/* Archived Section */}
+      <div className="mt-12 border-t border-slate-700 pt-8">
+        <button
+          onClick={() => setShowArchived(!showArchived)}
+          className="w-full px-6 py-4 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 text-white font-bold uppercase transition-colors flex items-center justify-between"
+          style={{ borderRadius: '0px' }}
+        >
+          <span>{showArchived ? '▼' : '▶'} Archived Items</span>
+          <span className="text-slate-400 text-sm font-normal">{items['Archived']?.length || 0}</span>
+        </button>
+
+        {showArchived && (
+          <div className="mt-6 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {(items['Archived'] || []).map(app => (
+              <div key={app.id} className="group">
+                <ApplicationCard
+                  application={app}
+                  hasSuggestion={suggestions.some(s => s.application_id === app.id)}
+                  onClick={() => onCardClick(app)}
+                  onDelete={handleDelete}
+                  isArchived={true}
+                  onPrepClick={(app) => {
+                    setPrepModalApp(app)
+                    setShowPrepModal(true)
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showArchived && (items['Archived']?.length === 0) && (
+          <div className="text-center text-slate-400 py-8">
+            No archived items
+          </div>
+        )}
+      </div>
 
       {/* Interview Prep Modal */}
       <InterviewPrepModal

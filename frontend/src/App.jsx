@@ -160,14 +160,13 @@ function App() {
           {currentPage === 'dashboard' && (
             <>
               {/* Stats Bar */}
-              <div className="grid grid-cols-6 gap-6 mb-8">
+              <div className="grid grid-cols-5 gap-6 mb-8">
                 {[
                   { label: 'Submitted', key: 'Submitted' },
                   { label: 'More Info', key: 'More Info Required' },
                   { label: 'Interview', key: 'Interview Started' },
                   { label: 'Denied', key: 'Denied' },
                   { label: 'Offered', key: 'Offered' },
-                  { label: 'Archived', key: 'Archived' },
                 ].map((stat, idx) => (
                   <div key={idx} className="text-center border-b border-slate-800 pb-4">
                     <div className="text-3xl font-black text-white mb-1">{stats[stat.key] || 0}</div>
