@@ -190,6 +190,23 @@ export function Settings() {
                 : '⚠️ All API keys have exhausted their daily quota. Quota resets daily at midnight UTC.'}
             </p>
 
+            {geminiStatus.keys_available === 0 && (
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await api.post('/settings/gemini-keys/reset')
+                    setGeminiStatus(response.data)
+                  } catch (error) {
+                    console.error('Failed to reset quota:', error)
+                  }
+                }}
+                className="w-full px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold uppercase text-xs transition-colors"
+                style={{ borderRadius: '0px' }}
+              >
+                🔄 Reset Quota (Testing)
+              </button>
+            )}
+
             <p className="text-xs text-slate-500">
               To add more keys, edit <code className="bg-slate-900 px-2 py-1 rounded text-xs text-slate-200">.env</code> file with{' '}
               <code className="bg-slate-900 px-2 py-1 rounded text-xs text-slate-200">GEMINI_API_KEY_2</code>,{' '}

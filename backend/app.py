@@ -1433,6 +1433,24 @@ def get_gemini_keys_status():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/settings/gemini-keys/reset", methods=["POST"])
+def reset_gemini_keys_quota():
+    """Reset quota tracking for all API keys (for testing). DEV ONLY."""
+    try:
+        from key_manager import key_manager
+
+        logger.warning("🔄 Manual quota reset initiated")
+        key_manager.reset_daily()
+        status = key_manager.get_status()
+        status["quota_limit"] = 1500
+        status["message"] = "✓ All API keys quota reset. Ready to test."
+
+        return jsonify(status), 200
+    except Exception as e:
+        logger.error(f"Error resetting Gemini keys quota: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/applications/<int:app_id>/prep/research", methods=["POST"])
 def research_company_prep(app_id):
     """Research a company for interview prep with optional website crawling."""
