@@ -54,63 +54,6 @@ export function Settings() {
         </div>
       )}
 
-      {/* Salary Settings */}
-      <div className="bg-slate-800/50 border border-slate-700 p-6 space-y-6" style={{ borderRadius: '0px' }}>
-        <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>
-          💰 Salary Defaults
-        </h3>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-bold text-slate-300 mb-2">
-              Default Minimum Salary: ${settings.defaultSalaryMin?.toLocaleString()}
-            </label>
-            <input
-              type="range"
-              min="30000"
-              max="300000"
-              step="5000"
-              value={settings.defaultSalaryMin || 80000}
-              onChange={(e) => setSettings({...settings, defaultSalaryMin: parseInt(e.target.value)})}
-              className="w-full"
-            />
-            <div className="flex gap-4 mt-2">
-              <input
-                type="number"
-                value={settings.defaultSalaryMin || 80000}
-                onChange={(e) => setSettings({...settings, defaultSalaryMin: parseInt(e.target.value)})}
-                className="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 text-white rounded"
-                style={{ borderRadius: '0px' }}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-slate-300 mb-2">
-              Default Maximum Salary: ${settings.defaultSalaryMax?.toLocaleString()}
-            </label>
-            <input
-              type="range"
-              min="50000"
-              max="500000"
-              step="5000"
-              value={settings.defaultSalaryMax || 150000}
-              onChange={(e) => setSettings({...settings, defaultSalaryMax: parseInt(e.target.value)})}
-              className="w-full"
-            />
-            <div className="flex gap-4 mt-2">
-              <input
-                type="number"
-                value={settings.defaultSalaryMax || 150000}
-                onChange={(e) => setSettings({...settings, defaultSalaryMax: parseInt(e.target.value)})}
-                className="flex-1 px-4 py-2 bg-slate-900 border border-slate-600 text-white rounded"
-                style={{ borderRadius: '0px' }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Archive Settings */}
       <div className="bg-slate-800/50 border border-slate-700 p-6 space-y-4" style={{ borderRadius: '0px' }}>
         <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>

@@ -95,7 +95,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden' }}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col" style={{ fontFamily: 'system-ui, -apple-system, sans-serif', overflow: 'hidden', scrollbarGutter: 'stable' }}>
       {/* Header - Slim */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-30 flex-shrink-0">
         <div className="w-full px-8 py-4">
@@ -206,6 +206,7 @@ function App() {
                   suggestions={suggestions}
                   onCardClick={handleCardClick}
                   onRefresh={loadData}
+                  onNavToInterview={handleNavToInterview}
                 />
               </div>
 

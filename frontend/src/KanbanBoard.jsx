@@ -58,8 +58,8 @@ function DraggingCardOverlay({ application, hasSuggestion }) {
   )
 }
 
-function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPrepClick }) {
-  const { setNodeRef } = useSortable({ id: column.id, data: { type: 'Column', column } })
+function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPrepClick, onNavToInterview }) {
+  const { setNodeRef, isOver } = useSortable({ id: column.id, data: { type: 'Column', column } })
   const suggestionsMap = new Map(suggestions.map(s => [s.application_id, true]))
 
   return (
@@ -69,7 +69,9 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPre
       </div>
       <div
         ref={setNodeRef}
-        className="space-y-4 flex-1 p-6 min-h-[500px] transition-colors duration-200 border bg-slate-800/30 border-slate-700"
+        className={`space-y-4 flex-1 p-6 min-h-[500px] transition-colors duration-200 border ${
+          isOver ? 'bg-blue-900/40 border-blue-500' : 'bg-slate-800/30 border-slate-700'
+        }`}
         style={{ borderRadius: '0px' }}
       >
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
@@ -82,7 +84,7 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPre
               onClick={() => onCardClick(app)}
               onDelete={onDelete}
               isArchived={false}
-              onPrepClick={onPrepClick}
+              onPrepClick={onNavToInterview || onPrepClick}
             />
           ))}
         </SortableContext>
@@ -94,7 +96,7 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPre
   )
 }
 
-export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh }) {
+export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh, onNavToInterview }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [activeId, setActiveId] = useState(null)
@@ -189,6 +191,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh 
               onCardClick={onCardClick}
               onDelete={handleDelete}
               onPrepClick={(app) => { setPrepModalApp(app); setShowPrepModal(true) }}
+              onNavToInterview={onNavToInterview}
             />
           ))}
         </div>
@@ -224,7 +227,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh 
                 onClick={() => onCardClick(app)}
                 onDelete={handleDelete}
                 isArchived={true}
-                onPrepClick={(app) => { setPrepModalApp(app); setShowPrepModal(true) }}
+                onPrepClick={onNavToInterview || ((app) => { setPrepModalApp(app); setShowPrepModal(true) })}
               />
             ))}
           </div>

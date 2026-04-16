@@ -67,7 +67,12 @@ export function InterviewPrepPage({ application, onBack }) {
     setError(null)
     try {
       const res = await researchCompanyPrep(application.id, { company_website: companyWebsite || undefined })
-      setPrep(res.data)
+      // Parse company_research if it's a string
+      const prepData = { ...res.data }
+      if (typeof prepData.company_research === 'string') {
+        prepData.company_research = JSON.parse(prepData.company_research)
+      }
+      setPrep(prepData)
     } catch (err) {
       setError(err.message || 'Failed to research company')
     } finally {
