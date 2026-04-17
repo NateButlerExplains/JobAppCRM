@@ -1343,12 +1343,12 @@ def auth_status():
         return jsonify({"authenticated": False, "error": str(e)}), 200
 
 
-@app.route("/api/gemini/health", methods=["GET"])
-def gemini_health():
-    """Check Gemini API health with a lightweight classification call."""
+@app.route("/api/claude/health", methods=["GET"])
+def claude_health():
+    """Check Claude API health with a lightweight classification call."""
     try:
-        from gemini_classifier import GeminiClassifier
-        classifier = GeminiClassifier()
+        from claude_classifier import ClaudeClassifier
+        classifier = ClaudeClassifier()
         result = classifier.classify_email(
             subject="Application received for Software Engineer",
             body="Thanks for applying to Acme Corp for the Software Engineer role.",
@@ -1356,14 +1356,14 @@ def gemini_health():
         )
         return jsonify({
             "ok": True,
-            "model": Config.GEMINI_MODEL,
+            "model": "claude-3-5-sonnet-20241022",
             "result": result,
         }), 200
     except Exception as e:
-        logger.error(f"Gemini health check failed: {e}")
+        logger.error(f"Claude health check failed: {e}")
         return jsonify({
             "ok": False,
-            "model": Config.GEMINI_MODEL,
+            "model": "claude-3-5-sonnet-20241022",
             "error": str(e),
         }), 200
 
@@ -1416,38 +1416,46 @@ def set_sync_schedule():
 
 
 @app.route("/api/settings/gemini-keys", methods=["GET"])
-def get_gemini_keys_status():
-    """Get Gemini API key status and quota information."""
+def get_claude_api_status():
+    """Get Claude API status information (migration endpoint from Gemini)."""
     try:
-        from key_manager import key_manager
-
-        status = key_manager.get_status()
-        # Add quota limit to status response
-        status["quota_limit"] = 1500  # Free tier daily limit per key
-        status["quota_resets_at"] = "midnight UTC"
-        status["retry_available"] = status["keys_available"] > 1
+        # Claude uses a single API key with no rotation needed
+        # Return simplified status for compatibility with frontend
+        status = {
+            "current_key": 1,
+            "total_keys": 1,
+            "quota_exhausted": [],
+            "keys_available": 1,
+            "api": "claude",
+            "model": "claude-3-5-sonnet-20241022",
+            "rate_limit": "100k tokens/minute",
+            "status": "operational" if Config.CLAUDE_API_KEY else "not configured"
+        }
 
         return jsonify(status), 200
     except Exception as e:
-        logger.error(f"Error getting Gemini keys status: {e}")
+        logger.error(f"Error getting Claude API status: {e}")
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/settings/gemini-keys/reset", methods=["POST"])
-def reset_gemini_keys_quota():
-    """Reset quota tracking for all API keys (for testing). DEV ONLY."""
+def reset_claude_quota():
+    """No-op endpoint for compatibility (Claude doesn't need quota resets)."""
     try:
-        from key_manager import key_manager
-
-        logger.warning("🔄 Manual quota reset initiated")
-        key_manager.reset_daily()
-        status = key_manager.get_status()
-        status["quota_limit"] = 1500
-        status["message"] = "✓ All API keys quota reset. Ready to test."
+        logger.info("Claude API quota reset requested (no-op - Claude doesn't need key rotation)")
+        status = {
+            "current_key": 1,
+            "total_keys": 1,
+            "quota_exhausted": [],
+            "keys_available": 1,
+            "api": "claude",
+            "status": "operational",
+            "message": "Claude API doesn't require quota resets - always available"
+        }
 
         return jsonify(status), 200
     except Exception as e:
-        logger.error(f"Error resetting Gemini keys quota: {e}")
+        logger.error(f"Error in Claude quota reset endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -1473,49 +1481,21 @@ def research_company_prep(app_id):
         # Get or create interview prep
         prep = InterviewPrep.get_or_create(db, app_id)
 
-        # Research with automatic key rotation on quota exhaustion
-        from google.api_core import exceptions as google_exceptions
-        from key_manager import key_manager
-
-        research_result = None
-        max_attempts = len(Config.GEMINI_API_KEYS)
-        attempt = 0
-
-        while attempt < max_attempts:
-            try:
-                processor = EmailProcessor(db)
-                research_result = processor.classifier.research_company_with_website(
-                    company_name=app["company_name"],
-                    job_title=app["job_title"],
-                    job_url=app.get("job_url", ""),
-                    company_website=company_website
-                )
-                key_manager.record_request()
-                break  # Success, exit loop
-
-            except google_exceptions.ResourceExhausted:
-                # Current key's quota exceeded - try next key
-                logger.warning(f"⚠️  Quota exceeded on key {key_manager.get_current_key_id()}, rotating to next key...")
-                if not key_manager.rotate_to_next_key():
-                    # No more keys available
-                    return jsonify({
-                        "error": f"All Gemini API keys have exhausted their daily quota (1500 requests/day). "
-                                f"Keys exhausted: {key_manager.get_status()['quota_exhausted']}. "
-                                f"Quota resets at midnight UTC.",
-                        "status": key_manager.get_status(),
-                        "retry_after": "approximately 24 hours"
-                    }), 429
-
-                # Attempt with new key
-                attempt += 1
-                continue
-
-            except Exception as e:
-                logger.error(f"Research error: {e}")
-                return jsonify({"error": str(e)}), 500
+        # Research company using Claude API
+        try:
+            processor = EmailProcessor(db)
+            research_result = processor.classifier.research_company_with_website(
+                company_name=app["company_name"],
+                job_title=app["job_title"],
+                job_url=app.get("job_url", ""),
+                company_website=company_website
+            )
+        except Exception as e:
+            logger.error(f"Research error: {e}")
+            return jsonify({"error": str(e)}), 500
 
         if research_result is None:
-            return jsonify({"error": "Research failed - no valid API keys available"}), 500
+            return jsonify({"error": "Research failed - Claude API error"}), 500
 
         # Only save research if it succeeded (has actual data, not error state)
         if research_result.get("data_source") != "error" and (research_result.get("company_overview") or len(research_result.get("key_products", [])) > 0):
@@ -1523,10 +1503,10 @@ def research_company_prep(app_id):
             update_fields = {
                 "company_research": json.dumps(research_result),
                 "web_crawled": research_result.get("web_crawled", False),
-                "data_source": research_result.get("data_source", "gemini_knowledge")
+                "data_source": research_result.get("data_source", "claude_knowledge")
             }
             InterviewPrep.update(db, prep["id"], update_fields)
-            logger.info(f"✅ Research data saved for {app['company_name']} (using key {key_manager.get_current_key_id()})")
+            logger.info(f"✅ Research data saved for {app['company_name']} via Claude API")
         else:
             # Research failed (API error, quota exceeded, etc.) - don't overwrite existing data
             logger.warning(f"⚠️  Research failed - not overwriting existing data. Reason: {research_result.get('data_source')}")
@@ -1540,7 +1520,7 @@ def research_company_prep(app_id):
             else:
                 # No existing data and new research failed
                 return jsonify({
-                    "error": "Research failed - no data returned from Gemini API",
+                    "error": "Research failed - Claude API error",
                     "retry_after": "try again in a few minutes"
                 }), 500
 
@@ -1550,12 +1530,6 @@ def research_company_prep(app_id):
 
     except Exception as e:
         logger.error(f"Error researching company: {e}")
-        # Check if it's a 429 quota error
-        if "429" in str(e) or "quota" in str(e).lower():
-            return jsonify({
-                "error": "Gemini API quota exceeded (limit: 20 requests/day per model). The daily quota will reset tomorrow.",
-                "retry_after": "approximately 24 hours"
-            }), 429
         return jsonify({"error": str(e)}), 500
 
 
