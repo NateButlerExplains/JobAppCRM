@@ -553,20 +553,55 @@ EXACT JSON RESPONSE FORMAT:
 RESPOND WITH ONLY THE JSON OBJECT, NOTHING ELSE:"""
 
         try:
-            try:
-                response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
-                    temperature=0.5,
-                    max_output_tokens=4000,
-                ))
-            except google_exceptions.ResourceExhausted as e:
-                logger.error(f"❌ Gemini API quota exhausted: {e}")
-                # Mark key as exhausted and re-raise for caller to handle
+            # Retry logic with rate limit awareness
+            max_retries = 3
+            retry_count = 0
+            response = None
+            last_error = None
+
+            while retry_count < max_retries:
                 try:
-                    from key_manager import key_manager
-                    key_manager.mark_quota_exhausted()
-                except ImportError:
-                    pass
-                raise  # Re-raise so research_company_prep can catch and rotate keys
+                    response = self.model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
+                        temperature=0.5,
+                        max_output_tokens=4000,
+                    ))
+                    break  # Success, exit retry loop
+                except google_exceptions.ResourceExhausted as e:
+                    last_error = e
+                    logger.warning(f"⚠️  Rate limit hit (attempt {retry_count + 1}/{max_retries}): {e}")
+
+                    # Mark key as exhausted for key rotation
+                    try:
+                        from key_manager import key_manager
+                        key_manager.mark_quota_exhausted()
+                    except ImportError:
+                        pass
+
+                    # Extract retry delay from error if available
+                    retry_after = 2  # Default to 2 seconds
+                    error_str = str(e)
+                    if "retry in" in error_str.lower():
+                        try:
+                            # Try to extract seconds from error message
+                            import re
+                            match = re.search(r'retry in (\d+)', error_str, re.IGNORECASE)
+                            if match:
+                                retry_after = int(match.group(1)) + 1
+                        except:
+                            pass
+
+                    retry_count += 1
+                    if retry_count < max_retries:
+                        logger.info(f"⏳ Waiting {retry_after}s before retry...")
+                        import time
+                        time.sleep(retry_after)
+                    else:
+                        logger.error(f"❌ Max retries exceeded. Re-raising error for key rotation.")
+                        raise  # Re-raise so research_company_prep can catch and rotate keys
+
+            if response is None:
+                logger.error(f"❌ All retry attempts failed for {company_name}")
+                raise Exception("Gemini API rate limit exceeded - all retry attempts failed")
 
             logger.info(f"✅ Gemini API response received ({len(response.text)} chars)")
             result = self._extract_json(response.text)
