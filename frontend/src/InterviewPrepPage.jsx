@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { researchCompanyPrep, generateInterviewQuestions, uploadMarkdownResearch } from './api'
+import { getInterviewPrep, researchCompanyPrep, generateInterviewQuestions, uploadMarkdownResearch } from './api'
 import { parseMarkdownResearch } from './utils/markdownParser'
 import { formatMarkdownText } from './utils/markdownFormatter.jsx'
 import { PromptTemplateModal } from './components/PromptTemplateModal'
@@ -95,6 +95,7 @@ export function InterviewPrepPage({ application, onBack }) {
   const [showPromptModal, setShowPromptModal] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [pendingUpload, setPendingUpload] = useState(null)
   const fileInputRef = useRef(null)
   const saveTimeoutRef = useRef(null)
 
@@ -133,7 +134,7 @@ export function InterviewPrepPage({ application, onBack }) {
   useEffect(() => {
     const loadPrepData = async () => {
       try {
-        const res = await researchCompanyPrep(application.id)
+        const res = await getInterviewPrep(application.id)
         const prepData = { ...res.data }
         if (typeof prepData.company_research === 'string') {
           prepData.company_research = JSON.parse(prepData.company_research)
@@ -218,16 +219,8 @@ export function InterviewPrepPage({ application, onBack }) {
       const text = await file.text()
       const parsed = parseMarkdownResearch(text)
 
-      // Save to database via API
-      const res = await uploadMarkdownResearch(application.id, parsed)
-
-      // Update prep data
-      if (typeof res.data.company_research === 'string') {
-        res.data.company_research = JSON.parse(res.data.company_research)
-      }
-      setPrep(res.data)
-      setEditedFields({})
-      setHasUnsavedChanges(false)
+      // Store pending upload but don't save yet
+      setPendingUpload(parsed)
       setError(null)
     } catch (err) {
       setError(`Upload failed: ${err.message}`)
@@ -237,6 +230,41 @@ export function InterviewPrepPage({ application, onBack }) {
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
+    }
+  }
+
+  const handleConfirmUpload = async () => {
+    if (!pendingUpload) return
+
+    setIsSaving(true)
+    try {
+      const res = await uploadMarkdownResearch(application.id, pendingUpload)
+
+      // Update prep data and parse all JSON fields
+      const prepData = { ...res.data }
+      if (typeof prepData.company_research === 'string') {
+        prepData.company_research = JSON.parse(prepData.company_research)
+      }
+      if (typeof prepData.interview_questions === 'string') {
+        prepData.interview_questions = JSON.parse(prepData.interview_questions)
+      }
+      if (typeof prepData.questions_to_ask === 'string') {
+        prepData.questions_to_ask = JSON.parse(prepData.questions_to_ask)
+      }
+      setPrep(prepData)
+      setPendingUpload(null)
+      setEditedFields({})
+      setHasUnsavedChanges(false)
+      setError(null)
+
+      // Scroll to research section
+      setTimeout(() => {
+        document.querySelector('[data-research-section]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 100)
+    } catch (err) {
+      setError(`Failed to save upload: ${err.message}`)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -443,12 +471,12 @@ ${companyResearch?.hiring_focus || 'N/A'}`
             ref={fileInputRef}
             accept=".md"
             onChange={handleFileUpload}
-            disabled={uploadLoading}
+            disabled={uploadLoading || !!pendingUpload}
             className="hidden"
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploadLoading}
+            disabled={uploadLoading || !!pendingUpload}
             className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white font-bold uppercase text-sm transition-colors"
             style={{ borderRadius: '0px' }}
           >
@@ -460,6 +488,56 @@ ${companyResearch?.hiring_focus || 'N/A'}`
           💡 <button onClick={() => setShowPromptModal(true)} className="text-blue-400 hover:underline cursor-pointer">Use the prompt template</button> with Claude, ChatGPT, or Gemini to research the company
         </p>
       </div>
+
+      {/* Pending Upload Preview */}
+      {pendingUpload && (
+        <div className="bg-green-900/20 border-2 border-green-700 p-6 rounded">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-bold">✓ Preview Loaded</h3>
+            <button
+              onClick={() => setPendingUpload(null)}
+              className="text-slate-400 hover:text-white text-sm"
+            >
+              ✕ Clear
+            </button>
+          </div>
+          <p className="text-slate-300 text-sm mb-4">Review the data below. Click Submit to save this research.</p>
+
+          {/* Quick preview of sections */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {Object.entries(pendingUpload).map(([key, value]) => {
+              if (!value) return null
+              const label = key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+              return (
+                <div key={key} className="bg-slate-800/50 p-2 rounded text-xs">
+                  <p className="text-slate-400 font-semibold">{label}</p>
+                  <p className="text-slate-300 line-clamp-2">
+                    {Array.isArray(value) ? value[0] : String(value).substring(0, 40)}...
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleConfirmUpload}
+              disabled={isSaving}
+              className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold uppercase text-sm transition-colors"
+              style={{ borderRadius: '4px' }}
+            >
+              {isSaving ? '💾 Submitting...' : '✓ Submit'}
+            </button>
+            <button
+              onClick={() => setPendingUpload(null)}
+              className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold uppercase text-sm transition-colors"
+              style={{ borderRadius: '4px' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {researching && (
@@ -545,7 +623,7 @@ ${companyResearch?.hiring_focus || 'N/A'}`
           {/* Only show research content if not in error state */}
           {companyResearch?.data_source !== 'error' && (
             <>
-              <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div data-research-section className="flex items-center justify-between gap-2 flex-wrap">
                 <div>
                   <h3 className="font-bold text-white uppercase text-sm" style={{ letterSpacing: '0.5px' }}>
                     Company Research

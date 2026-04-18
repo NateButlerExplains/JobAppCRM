@@ -60,23 +60,45 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
         </button>
       )}
 
-      {/* Company + Role */}
-      <h3 className="font-bold text-sm text-white leading-tight pr-6">
-        {application.company_name}
-      </h3>
-      <p className="text-xs text-slate-300 mt-0.5 mb-3">
-        <span className="text-blue-400 font-semibold">{application.job_title}</span>
-      </p>
+      {/* Company + Role - centered */}
+      <div className="text-center mb-3">
+        <h3 className="font-bold text-sm text-white leading-tight">
+          {application.company_name}
+        </h3>
+        <p className="text-xs text-blue-400 font-semibold">
+          {application.job_title}
+        </p>
+      </div>
 
-      {/* Date Applied */}
-      <p className="text-xs text-slate-500 mb-2">
-        Applied {new Date(application.date_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-      </p>
+      {/* Two-column layout for main info - centered */}
+      <div className="grid grid-cols-2 gap-3 mb-2">
+        {/* Left column */}
+        <div className="text-xs text-center space-y-1.5">
+          <div>
+            <span className="text-slate-500 block text-xs mb-0.5">Applied</span>
+            <p className="text-slate-300 font-medium">
+              {new Date(application.date_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </p>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-xs mb-0.5">Type</span>
+            <p className="text-slate-300 font-medium">{application.employment_type || '—'}</p>
+          </div>
+        </div>
 
-      {/* Primary metrics */}
-      <div className="text-xs text-slate-300 font-medium flex flex-wrap gap-2 items-center mb-2">
-        {application.employment_type && <span className="text-slate-400">{application.employment_type}</span>}
-        {application.work_arrangement && <span className="text-slate-400">{application.work_arrangement}</span>}
+        {/* Right column */}
+        <div className="text-xs text-center space-y-1.5">
+          <div>
+            <span className="text-slate-500 block text-xs mb-0.5">Arrangement</span>
+            <p className="text-slate-300 font-medium">{application.work_arrangement || '—'}</p>
+          </div>
+          <div>
+            <span className="text-slate-500 block text-xs mb-0.5">Target</span>
+            <p className="text-blue-400 font-semibold">
+              {targetDisplay || <span className="text-slate-500 italic">—</span>}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Status badges */}
@@ -95,9 +117,6 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
 
       {/* Hidden details - show on hover */}
       <div className="text-xs text-slate-400 mt-3 pt-3 border-t border-slate-700 hidden group-hover:block space-y-2">
-        {targetDisplay && (
-          <div className="text-blue-400">🎯 Target: {targetDisplay}{isHourly ? '/hr' : ''}</div>
-        )}
         {application.job_location && (
           <div className="text-slate-300">📍 {application.job_location}</div>
         )}
@@ -106,9 +125,6 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
         )}
         {application.notes && (
           <div className="text-slate-400 italic">"{application.notes.substring(0, 80)}{application.notes.length > 80 ? '...' : ''}"</div>
-        )}
-        {application.company_website && (
-          <div className="text-slate-500 truncate">Site: {application.company_website}</div>
         )}
         {onPrepClick && (
           <button

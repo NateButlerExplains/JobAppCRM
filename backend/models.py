@@ -314,7 +314,7 @@ class Application:
     @staticmethod
     def update(db: Database, app_id: int, fields: Dict[str, Any]):
         """Update application with whitelisted fields."""
-        ALLOWED = {'company_name', 'job_title', 'job_url', 'notes', 'salary_min', 'salary_max', 'salary_negotiation_target', 'status', 'company_domain', 'order_position', 'job_location'}
+        ALLOWED = {'company_name', 'job_title', 'job_url', 'notes', 'salary_min', 'salary_max', 'salary_negotiation_target', 'status', 'company_domain', 'order_position', 'job_location', 'work_arrangement', 'work_arrangement_notes', 'employment_type', 'pay_type', 'company_website'}
 
         # Filter to allowed fields only
         updates = {k: v for k, v in fields.items() if k in ALLOWED}
