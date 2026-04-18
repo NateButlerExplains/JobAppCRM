@@ -99,11 +99,11 @@ function App() {
       {/* Header - Slim */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl sticky top-0 z-30 flex-shrink-0">
         <div className="w-full px-8 py-4">
-          <div className="flex justify-between items-center">
-            {/* Logo - Left */}
+          <div className="flex items-center justify-center relative">
+            {/* Logo - Left (absolute) */}
             <button
               onClick={() => setCurrentPage('dashboard')}
-              className="text-3xl font-black uppercase tracking-tight text-white hover:text-blue-400 transition-colors cursor-pointer"
+              className="absolute left-0 text-3xl font-black uppercase tracking-tight text-white hover:text-blue-400 transition-colors cursor-pointer"
               style={{ letterSpacing: '2px' }}
             >
               Job CRM
@@ -146,11 +146,11 @@ function App() {
               </button>
             </div>
 
-            {/* Button - Right */}
+            {/* Button - Right (absolute) */}
             {currentPage === 'dashboard' && (
               <button
                 onClick={() => setShowNewAppForm(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
+                className="absolute right-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
                 style={{ letterSpacing: '0.5px', borderRadius: '0px' }}
               >
                 + New
