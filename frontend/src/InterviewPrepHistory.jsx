@@ -74,29 +74,26 @@ export function InterviewPrepHistory({ onSelectApp }) {
           <p className="text-slate-400">No interview prep sessions yet. Upload company research or use the research tool to get started.</p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="flex flex-wrap gap-4">
           {sessions.map((session) => (
             <div
               key={session.id}
               onClick={() => handleSessionClick(session)}
-              className="p-4 bg-slate-800 border border-slate-700 hover:border-blue-500 cursor-pointer transition-all duration-200 hover:bg-slate-750"
-              style={{ borderRadius: '8px' }}
+              className="p-4 bg-slate-800 border border-slate-700 hover:border-blue-500 cursor-pointer transition-all duration-200 hover:bg-slate-750 flex-shrink-0"
+              style={{ borderRadius: '8px', width: '280px' }}
             >
-              <div className="flex justify-between items-start gap-4">
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg text-white mb-1">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="font-bold text-base text-white">
                     {session.company_name}
                   </h3>
-                  <p className="text-sm text-blue-400 font-semibold mb-2">
+                  <p className="text-sm text-blue-400 font-semibold">
                     {session.job_title}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Updated {new Date(session.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </p>
                 </div>
 
                 {/* Status badges */}
-                <div className="flex gap-2 flex-wrap justify-end">
+                <div className="flex gap-2 flex-wrap">
                   {hasResearch(session) && (
                     <span className="inline-block px-2 py-1 bg-green-600/40 text-green-300 text-xs font-bold" style={{ borderRadius: '4px' }}>
                       ✓ Research
