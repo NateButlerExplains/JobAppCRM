@@ -46,8 +46,11 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
   return (
     <div
       onClick={onClick}
-      className="p-3 bg-slate-800 border border-slate-700 hover:border-blue-500 cursor-pointer relative transition-all duration-200 group hover:bg-slate-750"
-      style={{ borderRadius: '8px' }}
+      className="p-3 bg-slate-800 border border-slate-700 hover:border-blue-500 cursor-pointer relative transition-all duration-200 group hover:bg-slate-750 hover:shadow-lg"
+      style={{
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2), inset 0 -1px 2px rgba(255, 255, 255, 0.05)'
+      }}
     >
       {/* Delete button */}
       {onDelete && (
