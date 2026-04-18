@@ -52,7 +52,15 @@ function ResearchTile({ title, icon, content, loading, isEmpty, isEditing, field
   }
 
   return (
-    <div className="bg-slate-800/50 border border-slate-700">
+    <div
+      className="bg-slate-800/50 border border-slate-700 transition-all duration-200 hover:shadow-lg"
+      style={{
+        borderRadius: '8px',
+        boxShadow: expanded
+          ? '0 10px 25px rgba(0, 0, 0, 0.4), inset 0 -2px 4px rgba(255, 255, 255, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.3)'
+          : '0 4px 12px rgba(0, 0, 0, 0.2), inset 0 -1px 2px rgba(255, 255, 255, 0.05)'
+      }}
+    >
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex justify-between items-center p-4 hover:bg-slate-800/70 transition-colors"
@@ -683,15 +691,17 @@ ${companyResearch?.hiring_focus || 'N/A'}`
         </div>
       ) : (
         <div className="bg-slate-800/50 border border-slate-700 p-8 text-center">
-          <p className="text-slate-400 mb-4">No research data yet. Click the research button above to get started.</p>
-          <button
-            onClick={handleResearch}
-            disabled={researching}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ borderRadius: '0px' }}
-          >
-            {researching ? 'Researching...' : '🔍 Research Company'}
-          </button>
+          <p className="text-slate-400 mb-6">No research data yet. Click below to get started.</p>
+          <div className="flex justify-center">
+            <button
+              onClick={handleResearch}
+              disabled={researching}
+              className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ borderRadius: '8px' }}
+            >
+              {researching ? '⟳ Researching...' : '🔍 Research Company'}
+            </button>
+          </div>
         </div>
       )}
 
