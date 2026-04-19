@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useAuth } from './AuthContext'
+import { Login } from './Login'
 import { getApplications, getStats, getStageSuggestions } from './api'
 import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
@@ -9,6 +11,7 @@ import { InterviewPrepPage } from './InterviewPrepPage'
 import './App.css'
 
 function App() {
+  const { user, loading: authLoading, logout } = useAuth()
   const [applications, setApplications] = useState([])
   const [stats, setStats] = useState({})
   const [suggestions, setSuggestions] = useState([])
@@ -66,12 +69,27 @@ function App() {
     setCurrentPage('interview-prep')
   }
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login />
+  }
+
   if (loading && currentPage === 'dashboard') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-slate-400">Loading Job CRM...</p>
+          <p className="text-slate-400">Loading applications...</p>
         </div>
       </div>
     )
@@ -147,15 +165,24 @@ function App() {
             </div>
 
             {/* Button - Right (absolute) */}
-            {currentPage === 'dashboard' && (
+            <div className="absolute right-0 flex items-center gap-4">
+              {currentPage === 'dashboard' && (
+                <button
+                  onClick={() => setShowNewAppForm(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
+                  style={{ letterSpacing: '0.5px', borderRadius: '0px' }}
+                >
+                  + New
+                </button>
+              )}
               <button
-                onClick={() => setShowNewAppForm(true)}
-                className="absolute right-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors border-0"
-                style={{ letterSpacing: '0.5px', borderRadius: '0px' }}
+                onClick={logout}
+                className="px-3 py-2 text-slate-400 hover:text-slate-200 text-xs uppercase transition-colors"
+                title={user?.email}
               >
-                + New
+                Logout
               </button>
-            )}
+            </div>
           </div>
         </div>
       </header>
