@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { getInterviewPrep, researchCompanyPrep, generateInterviewQuestions, uploadMarkdownResearch } from './api'
+import { useAuth } from './AuthContext'
+import { getInterviewPrep, saveInterviewPrep } from './firestore'
 import { parseMarkdownResearch } from './utils/markdownParser'
 import { formatMarkdownText } from './utils/markdownFormatter.jsx'
 import { PromptTemplateModal } from './components/PromptTemplateModal'
@@ -92,10 +93,9 @@ function ResearchTile({ title, icon, content, loading, isEmpty, isEditing, field
 }
 
 export function InterviewPrepPage({ application, onBack }) {
+  const { user } = useAuth()
   const [prep, setPrep] = useState(null)
   const [companyWebsite, setCompanyWebsite] = useState(application?.company_website || '')
-  const [researching, setResearching] = useState(false)
-  const [generatingQuestions, setGeneratingQuestions] = useState(false)
   const [uploadLoading, setUploadLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -107,59 +107,24 @@ export function InterviewPrepPage({ application, onBack }) {
   const fileInputRef = useRef(null)
   const saveTimeoutRef = useRef(null)
 
-  const handleResearch = async () => {
-    setResearching(true)
-    setError(null)
-    try {
-      const res = await researchCompanyPrep(application.id, { company_website: companyWebsite || undefined })
-      // Parse company_research if it's a string
-      const prepData = { ...res.data }
-      if (typeof prepData.company_research === 'string') {
-        prepData.company_research = JSON.parse(prepData.company_research)
-      }
-      setPrep(prepData)
-    } catch (err) {
-      setError(err.message || 'Failed to research company')
-    } finally {
-      setResearching(false)
-    }
-  }
-
-  const handleGenerateQuestions = async () => {
-    setGeneratingQuestions(true)
-    setError(null)
-    try {
-      const res = await generateInterviewQuestions(application.id)
-      setPrep(prev => ({ ...prev, ...res.data }))
-    } catch (err) {
-      setError(err.message || 'Failed to generate questions')
-    } finally {
-      setGeneratingQuestions(false)
-    }
-  }
-
   // Load existing prep data when page opens
   useEffect(() => {
     const loadPrepData = async () => {
+      if (!user) return
       try {
-        const res = await getInterviewPrep(application.id)
-        const prepData = { ...res.data }
-        if (typeof prepData.company_research === 'string') {
-          prepData.company_research = JSON.parse(prepData.company_research)
+        const prepData = await getInterviewPrep(user.uid, application.id)
+        if (prepData) {
+          if (typeof prepData.company_research === 'string') {
+            prepData.company_research = JSON.parse(prepData.company_research)
+          }
+          setPrep(prepData)
         }
-        if (typeof prepData.interview_questions === 'string') {
-          prepData.interview_questions = JSON.parse(prepData.interview_questions)
-        }
-        if (typeof prepData.questions_to_ask === 'string') {
-          prepData.questions_to_ask = JSON.parse(prepData.questions_to_ask)
-        }
-        setPrep(prepData)
       } catch (err) {
         // No prep data exists yet, that's ok
       }
     }
     loadPrepData()
-  }, [application.id])
+  }, [user, application.id])
 
   // Auto-save when there are unsaved changes
   useEffect(() => {
@@ -183,7 +148,7 @@ export function InterviewPrepPage({ application, onBack }) {
   }, [hasUnsavedChanges, editedFields])
 
   const handleSaveChanges = async () => {
-    if (Object.keys(editedFields).length === 0) return
+    if (!user || Object.keys(editedFields).length === 0) return
 
     setIsSaving(true)
     try {
@@ -196,13 +161,11 @@ export function InterviewPrepPage({ application, onBack }) {
         ...editedFields
       }
 
-      const res = await uploadMarkdownResearch(application.id, updatedResearch)
+      await saveInterviewPrep(user.uid, application.id, {
+        company_research: updatedResearch
+      })
 
-      if (typeof res.data.company_research === 'string') {
-        res.data.company_research = JSON.parse(res.data.company_research)
-      }
-
-      setPrep(res.data)
+      setPrep(prev => ({ ...prev, company_research: updatedResearch }))
       setEditedFields({})
       setHasUnsavedChanges(false)
       setError(null)
@@ -242,24 +205,15 @@ export function InterviewPrepPage({ application, onBack }) {
   }
 
   const handleConfirmUpload = async () => {
-    if (!pendingUpload) return
+    if (!user || !pendingUpload) return
 
     setIsSaving(true)
     try {
-      const res = await uploadMarkdownResearch(application.id, pendingUpload)
+      await saveInterviewPrep(user.uid, application.id, {
+        company_research: pendingUpload
+      })
 
-      // Update prep data and parse all JSON fields
-      const prepData = { ...res.data }
-      if (typeof prepData.company_research === 'string') {
-        prepData.company_research = JSON.parse(prepData.company_research)
-      }
-      if (typeof prepData.interview_questions === 'string') {
-        prepData.interview_questions = JSON.parse(prepData.interview_questions)
-      }
-      if (typeof prepData.questions_to_ask === 'string') {
-        prepData.questions_to_ask = JSON.parse(prepData.questions_to_ask)
-      }
-      setPrep(prepData)
+      setPrep(prev => ({ ...prev, company_research: pendingUpload }))
       setPendingUpload(null)
       setEditedFields({})
       setHasUnsavedChanges(false)

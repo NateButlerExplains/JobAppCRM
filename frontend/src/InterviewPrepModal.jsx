@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { researchCompanyPrep, generateInterviewQuestions } from './api'
-import { saveInterviewPrepSession } from './interviewPrepStorage'
 import { X, ChevronDown } from 'lucide-react'
 
 // Expandable tile component

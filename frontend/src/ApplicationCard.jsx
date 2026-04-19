@@ -22,7 +22,8 @@ export function ApplicationCard({ application, hasSuggestion, onClick, onDelete,
 
   // Check if threshold hours have passed since submission and app is not in interview stage
   const getFollowUpIndicator = () => {
-    if (application.status === 'Interview Started' || application.status === 'Denied' || application.status === 'Offered' || application.status === 'Archived') {
+    const interviewStages = ['Phone Screening', '1st Round', '2nd Round', '3rd Round']
+    if (interviewStages.includes(application.status) || application.status === 'Archived') {
       return null
     }
     const submittedDate = new Date(application.date_submitted)

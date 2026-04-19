@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { createApplication } from './api'
+import { useAuth } from './AuthContext'
+import { createApplication } from './firestore'
 import { X } from 'lucide-react'
 
 export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     company_name: '',
     job_title: '',
@@ -21,6 +23,7 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
     is_staffing: false,
     staffing_company_name: '',
     end_client_name: '',
+    status: 'Submitted',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -31,6 +34,7 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!user) return
     if (!formData.company_name.trim()) { setError('Company name is required'); return }
     if (!formData.job_title.trim()) { setError('Job title is required'); return }
     if (!formData.date_submitted) { setError('Date applied is required'); return }
@@ -38,10 +42,10 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
     setLoading(true)
     setError(null)
     try {
-      const response = await createApplication({
+      const newApp = await createApplication(user.uid, {
         company_name: formData.company_name.trim(),
         job_title: formData.job_title.trim(),
-        date_submitted: formData.date_submitted,
+        date_submitted: new Date(formData.date_submitted),
         job_url: formData.job_url || null,
         company_website: formData.company_website || null,
         employment_type: formData.employment_type || null,
@@ -56,18 +60,20 @@ export function NewApplicationForm({ isOpen, onClose, onSuccess }) {
         is_staffing: formData.is_staffing || false,
         staffing_company_name: formData.staffing_company_name || null,
         end_client_name: formData.end_client_name || null,
+        status: 'Submitted',
+        order_position: 0,
       })
       setFormData({
         company_name: '', job_title: '', date_submitted: new Date().toISOString().split('T')[0],
         job_url: '', company_website: '', employment_type: '', pay_type: '',
         salary_min: '', salary_max: '', salary_negotiation_target: '',
         work_arrangement: '', work_arrangement_notes: '', job_location: '', notes: '',
-        is_staffing: false, staffing_company_name: '', end_client_name: '',
+        is_staffing: false, staffing_company_name: '', end_client_name: '', status: 'Submitted',
       })
-      if (onSuccess) onSuccess(response.data)
+      if (onSuccess) onSuccess(newApp)
       onClose()
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to create application')
+      setError(err.message || 'Failed to create application')
     } finally {
       setLoading(false)
     }

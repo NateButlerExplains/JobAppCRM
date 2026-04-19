@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { updateApplication, deleteApplication, reorderApplications } from './firestore'
 import { ApplicationCard } from './ApplicationCard'
 import { InterviewPrepModal } from './InterviewPrepModal'
 
@@ -113,7 +114,7 @@ function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPre
   )
 }
 
-export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh, onNavToInterview }) {
+export function KanbanBoard({ applications, onCardClick, onApplicationsChange, onNavToInterview, userId }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [activeId, setActiveId] = useState(null)
@@ -122,7 +123,6 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
   const [showArchived, setShowArchived] = useState(false)
   const [overColumnId, setOverColumnId] = useState(null)
   const [overPosition, setOverPosition] = useState(null)
-  const [localOrder, setLocalOrder] = useState({})
   const dragRef = useRef(null)
 
   const sensors = useSensors(
@@ -178,6 +178,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
   }
 
   const handleDelete = async (appId) => {
+    if (!userId) return
     const app = applications.find(a => a.id === appId)
     if (!app) return
 
@@ -185,8 +186,8 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
       if (!window.confirm('Permanently delete this application?')) return
       setLoading(true)
       try {
-        await deleteApplication(appId)
-        onRefresh()
+        await deleteApplication(userId, appId)
+        onApplicationsChange(applications.filter(a => a.id !== appId))
       } catch (err) {
         setError(`Failed to delete: ${err.message}`)
       } finally {
@@ -195,8 +196,8 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
     } else {
       setLoading(true)
       try {
-        await updateApplication(appId, { status: 'Archived' })
-        onRefresh()
+        await updateApplication(userId, appId, { status: 'Archived' })
+        onApplicationsChange(applications.map(a => a.id === appId ? { ...a, status: 'Archived' } : a))
       } catch (err) {
         setError(`Failed to archive: ${err.message}`)
       } finally {
@@ -206,6 +207,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
   }
 
   const handleDragEnd = async (event) => {
+    if (!userId) return
     const { active, over } = event
     setActiveId(null)
     setOverColumnId(null)
@@ -226,8 +228,8 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
     if (app.status !== targetColumnId) {
       setLoading(true)
       try {
-        await updateApplication(activeAppId, { status: targetColumnId })
-        onRefresh()
+        await updateApplication(userId, activeAppId, { status: targetColumnId })
+        onApplicationsChange(applications.map(a => a.id === activeAppId ? { ...a, status: targetColumnId } : a))
       } catch (err) {
         setError(`Failed to update: ${err.message}`)
       } finally {
@@ -236,13 +238,11 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
     }
     // Case 2: Reordering within the same column
     else if (!directColumn && over.id !== activeAppId) {
-      // over.id is a card id (not a column), so this is a reorder within the same column
       const columnApps = items[targetColumnId] || []
       const activeIdx = columnApps.findIndex(a => a.id === activeAppId)
       const overIdx = columnApps.findIndex(a => a.id === over.id)
 
       if (activeIdx !== -1 && overIdx !== -1 && activeIdx !== overIdx) {
-        // Create new order and set positions
         const newOrder = arrayMove(columnApps, activeIdx, overIdx)
         const updates = newOrder.map((app, idx) => ({
           id: app.id,
@@ -250,10 +250,13 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
         }))
 
         setLoading(true)
-
         try {
-          await reorderApplications(updates)
-          onRefresh()
+          await reorderApplications(userId, updates)
+          const updated = applications.map(a => {
+            const u = updates.find(up => up.id === a.id)
+            return u ? { ...a, order_position: u.order_position } : a
+          })
+          onApplicationsChange(updated)
         } catch (err) {
           setError(`Failed to reorder: ${err.message}`)
         } finally {
@@ -277,8 +280,8 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
             <KanbanColumn
               key={column.id}
               column={column}
-              items={localOrder[column.id] || items[column.id] || []}
-              suggestions={suggestions}
+              items={items[column.id] || []}
+              suggestions={[]}
               onCardClick={onCardClick}
               onDelete={handleDelete}
               onPrepClick={(app) => { setPrepModalApp(app); setShowPrepModal(true) }}
@@ -316,7 +319,7 @@ export function KanbanBoard({ applications, suggestions, onCardClick, onRefresh,
               <ApplicationCard
                 key={app.id}
                 application={app}
-                hasSuggestion={suggestions.some(s => s.application_id === app.id)}
+                hasSuggestion={false}
                 onClick={() => onCardClick(app)}
                 onDelete={handleDelete}
                 isArchived={true}

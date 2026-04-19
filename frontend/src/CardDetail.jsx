@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { getApplicationInteractions, createInteraction, updateApplication } from './api'
+import { useAuth } from './AuthContext'
+import { updateApplication } from './firestore'
 import { AddInteraction } from './AddInteraction'
 import { X } from 'lucide-react'
 
-const STATUSES = ['Submitted', 'More Info Required', 'Interview Started', 'Denied', 'Offered', 'Archived']
+const STATUSES = ['Submitted', 'Phone Screening', '1st Round', '2nd Round', '3rd Round', 'Archived']
 const WORK_ARRANGEMENTS = ['Remote', 'Hybrid', 'On-Site']
 
 function fmt(val) {
@@ -12,57 +13,24 @@ function fmt(val) {
 }
 
 export function CardDetail({ application, isOpen, onClose, onSave, onNavToInterview = () => {} }) {
-  const [interactions, setInteractions] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [showAddInteraction, setShowAddInteraction] = useState(false)
+  const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState({})
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
-  // Load interactions whenever modal opens for a new app
-  useEffect(() => {
-    if (isOpen && application) {
-      loadInteractions()
-    }
-  }, [isOpen, application?.id])
-
-  // Keep editData in sync with latest application data from parent
   useEffect(() => {
     if (application) {
       setEditData({ ...application })
     }
   }, [application])
 
-  const loadInteractions = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await getApplicationInteractions(application.id)
-      setInteractions(res.data || [])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleAddInteraction = async (data) => {
-    try {
-      await createInteraction(application.id, data)
-      await loadInteractions()
-      setShowAddInteraction(false)
-    } catch (err) {
-      console.error('Error adding interaction:', err)
-      throw err
-    }
-  }
-
   const handleSave = async () => {
+    if (!user) return
     setSaving(true)
     setError(null)
     try {
-      await updateApplication(application.id, editData)
+      await updateApplication(user.uid, application.id, editData)
       setIsEditing(false)
       if (onSave) onSave()
     } catch (err) {
@@ -312,45 +280,7 @@ export function CardDetail({ application, isOpen, onClose, onSave, onNavToInterv
                   </button>
                 </div>
 
-                {/* Interactions */}
-                <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-bold text-white uppercase text-xs text-slate-400" style={{ letterSpacing: '0.5px' }}>Interaction Log</h3>
-                    {!showAddInteraction && (
-                      <button onClick={() => setShowAddInteraction(true)}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold uppercase text-xs transition-colors" style={{ borderRadius: '0px' }}>
-                        + Add
-                      </button>
-                    )}
-                  </div>
-                  {loading && <p className="text-slate-400 text-sm">Loading...</p>}
-                  <div className="space-y-2">
-                    {interactions.length === 0 && !loading ? (
-                      <p className="text-slate-500 text-sm py-3 text-center">No interactions recorded yet</p>
-                    ) : (
-                      interactions.map(i => (
-                        <div key={i.id} className="bg-slate-800/30 border-l-4 border-blue-500 pl-4 py-2.5">
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex-1">
-                              <p className="font-medium text-sm text-white capitalize">{i.type.replace(/_/g, ' ')}</p>
-                              {i.content && <p className="text-sm text-slate-300 mt-0.5">{i.content}</p>}
-                            </div>
-                            <p className="text-xs text-slate-500 whitespace-nowrap">{new Date(i.occurred_at).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
               </div>
-            )}
-
-            {showAddInteraction && (
-              <AddInteraction
-                appId={application.id}
-                onClose={() => setShowAddInteraction(false)}
-                onSubmit={handleAddInteraction}
-              />
             )}
           </div>
         </div>

@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
-import { getInterviewPrepHistory, deleteInterviewPrep } from './api'
+import { useAuth } from './AuthContext'
+import { getInterviewPrepHistory, deleteInterviewPrep } from './firestore'
 import { Trash2 } from 'lucide-react'
 
 export function InterviewPrepHistory({ onSelectApp }) {
+  const { user } = useAuth()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     const loadSessions = async () => {
+      if (!user) return
       setLoading(true)
       setError(null)
       try {
-        const res = await getInterviewPrepHistory()
-        setSessions(res.data || [])
+        const sessions = await getInterviewPrepHistory(user.uid)
+        setSessions(sessions || [])
       } catch (err) {
         setError(err.message || 'Failed to load interview prep history')
         setSessions([])
@@ -22,12 +25,12 @@ export function InterviewPrepHistory({ onSelectApp }) {
       }
     }
     loadSessions()
-  }, [])
+  }, [user])
 
   const handleSessionClick = (session) => {
     if (onSelectApp) {
       onSelectApp({
-        id: session.application_id,
+        id: session.id,
         company_name: session.company_name,
         job_title: session.job_title,
       })
@@ -35,11 +38,12 @@ export function InterviewPrepHistory({ onSelectApp }) {
   }
 
   const handleDelete = async (e, session) => {
+    if (!user) return
     e.stopPropagation()
     if (window.confirm(`Delete interview prep for ${session.company_name}? This cannot be undone.`)) {
       setLoading(true)
       try {
-        await deleteInterviewPrep(session.application_id)
+        await deleteInterviewPrep(user.uid, session.application_id)
         setSessions(sessions.filter(s => s.application_id !== session.application_id))
       } catch (err) {
         setError(`Failed to delete: ${err.message}`)

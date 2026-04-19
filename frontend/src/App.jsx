@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { Login } from './Login'
+import { getApplications } from './firestore'
 import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
@@ -12,7 +13,7 @@ import './App.css'
 function App() {
   const { user, loading: authLoading, logout } = useAuth()
   const [applications, setApplications] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedApp, setSelectedApp] = useState(null)
   const [showCardDetail, setShowCardDetail] = useState(false)
@@ -20,14 +21,32 @@ function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [interviewPrepApp, setInterviewPrepApp] = useState(null)
 
+  useEffect(() => {
+    if (user) {
+      loadApplications()
+    }
+  }, [user])
+
+  const loadApplications = async () => {
+    if (!user) return
+    setLoading(true)
+    setError(null)
+    try {
+      const apps = await getApplications(user.uid)
+      setApplications(apps)
+    } catch (err) {
+      setError(err.message)
+      console.error('Error loading applications:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleCardClick = (app) => {
     setSelectedApp(app)
     setShowCardDetail(true)
   }
 
-  const handleApplicationsChange = (updatedApps) => {
-    setApplications(updatedApps)
-  }
 
   const handleNavToInterview = (app) => {
     setInterviewPrepApp(app)
@@ -56,7 +75,7 @@ function App() {
         <div className="text-center">
           <p className="text-red-400 mb-4">Error: {error}</p>
           <button
-            onClick={loadData}
+            onClick={loadApplications}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold uppercase tracking-wide transition-colors"
             style={{ borderRadius: '0px' }}
           >
@@ -161,19 +180,29 @@ function App() {
             </>
           )}
           {currentPage === 'dashboard' && (
-            <div className="space-y-8 max-w-4xl">
-              <div>
-                <h2 className="text-3xl font-black uppercase text-white mb-2" style={{ letterSpacing: '1px' }}>
-                  Dashboard
-                </h2>
-                <p className="text-slate-400 text-sm">Signed in as {user?.email}</p>
-              </div>
-              <div className="bg-slate-800/50 border border-slate-700 p-8 text-center rounded-lg space-y-4">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
-                <p className="text-slate-400 text-lg">Building Firestore integration...</p>
-                <p className="text-slate-500 text-sm">Coming soon: Kanban board with drag-and-drop, interview prep, and multi-user support</p>
-              </div>
-            </div>
+            <>
+              {loading ? (
+                <div className="flex items-center justify-center min-h-96">
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+                    <p className="text-slate-400">Loading applications...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-8">
+                  <KanbanBoard
+                    applications={applications}
+                    onCardClick={handleCardClick}
+                    onApplicationsChange={(apps) => {
+                      setApplications(apps)
+                      loadApplications()
+                    }}
+                    onNavToInterview={handleNavToInterview}
+                    userId={user?.uid}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -187,7 +216,7 @@ function App() {
           setSelectedApp(null)
         }}
         onSave={() => {
-          loadData()
+          loadApplications()
         }}
         onNavToInterview={handleNavToInterview}
       />
@@ -198,7 +227,6 @@ function App() {
         onClose={() => setShowNewAppForm(false)}
         onSuccess={(newApp) => {
           setApplications(prev => [newApp, ...prev])
-          loadData()
         }}
       />
     </div>
