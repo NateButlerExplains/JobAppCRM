@@ -165,10 +165,10 @@ function App() {
             {/* Logo - Left (absolute) */}
             <button
               onClick={() => setCurrentPage('dashboard')}
-              className="absolute left-0 text-3xl font-black uppercase tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
-              style={{ letterSpacing: '2px', color: 'white' }}
+              className="absolute left-0 flex items-center gap-2 text-3xl font-black uppercase tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
+              style={{ letterSpacing: '2px' }}
             >
-              PIPELINE
+              <span style={{ color: '#3b82f6', fontSize: '2.5rem' }}>→</span><span style={{ color: 'white' }}>PIPELINE</span>
             </button>
 
             {/* Navigation - Center */}
