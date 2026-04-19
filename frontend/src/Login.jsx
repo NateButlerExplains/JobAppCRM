@@ -1,12 +1,21 @@
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from './firebase'
 import { useState } from 'react'
+import { PrivacyPolicy } from './PrivacyPolicy'
+import { TermsOfService } from './TermsOfService'
 
 export function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [agreeToTerms, setAgreeToTerms] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
 
   const handleGoogleSignIn = async () => {
+    if (!agreeToTerms) {
+      setError('You must agree to the Privacy Policy and Terms of Service to continue')
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -33,6 +42,7 @@ export function Login() {
             <span style={{ color: '#3b82f6', fontSize: '2.5rem' }}>→</span>
             <span>PIPELINE</span>
           </h1>
+          <p className="text-slate-400 text-sm sm:text-base mt-2">Track. Manage. Land.</p>
         </div>
 
         {/* Login Card */}
@@ -43,10 +53,44 @@ export function Login() {
             <p className="text-slate-400 text-xs sm:text-sm text-center">Continue with your Google account</p>
           </div>
 
+          {/* Terms Agreement Checkbox */}
+          <div className="mb-6 p-3 sm:p-4 bg-slate-800/50 border border-slate-700 rounded-lg">
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={agreeToTerms}
+                onChange={(e) => setAgreeToTerms(e.target.checked)}
+                className="mt-1 accent-blue-500"
+              />
+              <span className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                I agree to the{' '}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setShowPrivacy(true)
+                  }}
+                  className="text-blue-400 hover:text-blue-300 underline font-semibold"
+                >
+                  Privacy Policy
+                </button>
+                {' '}and{' '}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setShowTerms(true)
+                  }}
+                  className="text-blue-400 hover:text-blue-300 underline font-semibold"
+                >
+                  Terms of Service
+                </button>
+              </span>
+            </label>
+          </div>
+
           {/* Google Sign-In Button */}
           <button
             onClick={handleGoogleSignIn}
-            disabled={loading}
+            disabled={loading || !agreeToTerms}
             className="w-full flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-3.5 bg-white hover:bg-slate-50 text-slate-900 font-semibold text-sm sm:text-base transition-all duration-200 rounded-lg shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed mb-6"
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24">
@@ -66,19 +110,15 @@ export function Login() {
             </div>
           )}
 
-          {/* Privacy Notice */}
-          <div className="pt-4 sm:pt-6 border-t border-slate-700/30">
-            <p className="text-slate-500 text-xs text-center leading-relaxed">
-              By signing in, you agree to our privacy policy. We only access your name and email address.
-            </p>
-          </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-slate-600 text-xs mt-6 sm:mt-8 font-medium tracking-wide">
-          SECURE • PRIVATE • ENCRYPTED
-        </p>
       </div>
+
+      {/* Privacy Policy Modal */}
+      <PrivacyPolicy isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+
+      {/* Terms of Service Modal */}
+      <TermsOfService isOpen={showTerms} onClose={() => setShowTerms(false)} />
     </div>
   )
 }
