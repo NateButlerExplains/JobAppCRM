@@ -29,7 +29,10 @@ export function Login() {
       <div className="relative w-full max-w-md px-4 sm:px-0">
         {/* Logo */}
         <div className="text-center mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-5xl font-black uppercase text-white" style={{ letterSpacing: '3px' }}>PIPELINE</h1>
+          <h1 className="text-3xl sm:text-5xl font-black uppercase text-white flex items-center justify-center gap-2" style={{ letterSpacing: '3px' }}>
+            <span style={{ color: '#3b82f6', fontSize: '2.5rem' }}>→</span>
+            <span>PIPELINE</span>
+          </h1>
         </div>
 
         {/* Login Card */}
@@ -37,7 +40,7 @@ export function Login() {
           {/* Header */}
           <div className="mb-6 sm:mb-8">
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 text-center">Sign in</h2>
-            <p className="text-slate-400 text-xs sm:text-sm">Continue with your Google account</p>
+            <p className="text-slate-400 text-xs sm:text-sm text-center">Continue with your Google account</p>
           </div>
 
           {/* Google Sign-In Button */}

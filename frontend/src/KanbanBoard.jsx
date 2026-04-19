@@ -331,13 +331,6 @@ export function KanbanBoard({ applications, onCardClick, onApplicationsChange, o
         onClose={() => { setShowPrepModal(false); setPrepModalApp(null) }}
       />
 
-      {loading && (
-        <div className="fixed inset-0 bg-black/20 flex items-center justify-center pointer-events-none z-50">
-          <div className="bg-slate-900 border border-slate-700 p-4">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
