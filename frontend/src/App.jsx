@@ -175,7 +175,7 @@ function App() {
             <div className="flex gap-8">
               <button
                 onClick={() => setCurrentPage('dashboard')}
-                className={`font-bold uppercase text-xs tracking-widest transition-colors pb-2 border-b-2 ${
+                className={`font-bold uppercase text-sm tracking-widest transition-colors pb-2 border-b-2 ${
                   currentPage === 'dashboard'
                     ? 'text-blue-400 border-blue-400'
                     : 'text-slate-500 border-transparent hover:text-slate-300'
@@ -186,7 +186,7 @@ function App() {
               </button>
               <button
                 onClick={() => setCurrentPage('interview-prep')}
-                className={`font-bold uppercase text-xs tracking-widest transition-colors pb-2 border-b-2 ${
+                className={`font-bold uppercase text-sm tracking-widest transition-colors pb-2 border-b-2 ${
                   currentPage === 'interview-prep'
                     ? 'text-blue-400 border-blue-400'
                     : 'text-slate-500 border-transparent hover:text-slate-300'
@@ -197,7 +197,7 @@ function App() {
               </button>
               <button
                 onClick={() => setCurrentPage('settings')}
-                className={`font-bold uppercase text-xs tracking-widest transition-colors pb-2 border-b-2 ${
+                className={`font-bold uppercase text-sm tracking-widest transition-colors pb-2 border-b-2 ${
                   currentPage === 'settings'
                     ? 'text-blue-400 border-blue-400'
                     : 'text-slate-500 border-transparent hover:text-slate-300'

@@ -68,7 +68,7 @@ function KanbanColumn({ column, items, suggestions = [], onCardClick, onDelete, 
   const suggestionsMap = new Map((suggestions || []).map(s => [s.application_id, true]))
 
   return (
-    <div className="flex flex-col gap-4 h-[800px] w-full">
+    <div className="flex flex-col gap-1 h-[800px] w-full">
       <div className="font-black text-xl uppercase pb-2 text-center text-white flex items-center justify-center gap-2" style={{ letterSpacing: '1px' }}>
         <span>{column.label}</span>
         <span className="text-sm font-normal text-slate-400">{items.length}</span>
