@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Blue right arrow only -->
-  <path d="M 12 32 L 48 32 M 48 32 L 42 26 M 48 32 L 42 38" stroke="#3b82f6" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Thick blue right arrow -->
+  <path d="M 8 32 L 48 32 M 48 32 L 38 22 M 48 32 L 38 42" stroke="#3b82f6" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

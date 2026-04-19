@@ -166,9 +166,9 @@ function App() {
             <button
               onClick={() => setCurrentPage('dashboard')}
               className="absolute left-0 text-3xl font-black uppercase tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
-              style={{ letterSpacing: '2px' }}
+              style={{ letterSpacing: '2px', color: 'white' }}
             >
-              <span style={{ color: '#3b82f6' }}>→</span><span style={{ color: 'white' }}>PIPELINE</span>
+              PIPELINE
             </button>
 
             {/* Navigation - Center */}

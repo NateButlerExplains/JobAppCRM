@@ -28,8 +28,7 @@ export function Login() {
 
       <div className="relative w-full max-w-md px-4 sm:px-0">
         {/* Logo */}
-        <div className="text-center mb-8 sm:mb-12 flex items-center justify-center gap-2 sm:gap-3">
-          <span className="text-3xl sm:text-5xl font-black" style={{ color: '#3b82f6', letterSpacing: '1px' }}>→</span>
+        <div className="text-center mb-8 sm:mb-12">
           <h1 className="text-3xl sm:text-5xl font-black uppercase text-white" style={{ letterSpacing: '3px' }}>PIPELINE</h1>
         </div>
 
