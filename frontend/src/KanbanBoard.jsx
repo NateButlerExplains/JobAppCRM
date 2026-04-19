@@ -60,12 +60,12 @@ function DraggingCardOverlay({ application, hasSuggestion }) {
   )
 }
 
-function KanbanColumn({ column, items, suggestions, onCardClick, onDelete, onPrepClick, onNavToInterview, isOver, overPosition }) {
+function KanbanColumn({ column, items, suggestions = [], onCardClick, onDelete, onPrepClick, onNavToInterview, isOver, overPosition }) {
   const { setNodeRef, isOver: isOverDroppable } = useDroppable({
     id: column.id,
     data: { type: 'Column', column }
   })
-  const suggestionsMap = new Map(suggestions.map(s => [s.application_id, true]))
+  const suggestionsMap = new Map((suggestions || []).map(s => [s.application_id, true]))
 
   return (
     <div className="flex flex-col gap-4 h-[800px] w-full">
