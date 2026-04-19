@@ -23,7 +23,6 @@ import { updateApplication, deleteApplication, reorderApplications } from './api
 
 const COLUMNS = [
   { id: 'Submitted', label: 'Submitted' },
-  { id: 'More Info Required', label: 'More Info Required' },
   { id: 'Interview Started', label: 'Interview Started' },
   { id: 'Denied', label: 'Denied' },
   { id: 'Offered', label: 'Offered' },
