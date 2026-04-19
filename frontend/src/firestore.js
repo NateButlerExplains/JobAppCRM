@@ -11,29 +11,32 @@ import {
   where,
   orderBy,
   writeBatch,
+  setDoc,
 } from 'firebase/firestore'
 
 // Applications
 export const createApplication = async (userId, data) => {
   const docRef = await addDoc(collection(db, `users/${userId}/applications`), {
     ...data,
+    order_position: data.order_position ?? 0,
     created_at: new Date(),
     updated_at: new Date(),
   })
-  return { id: docRef.id, ...data }
+  return { id: docRef.id, ...data, order_position: data.order_position ?? 0 }
 }
 
 export const getApplications = async (userId) => {
-  const q = query(
-    collection(db, `users/${userId}/applications`),
-    orderBy('order_position', 'asc'),
-    orderBy('date_submitted', 'desc')
-  )
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map(doc => ({
+  const snapshot = await getDocs(collection(db, `users/${userId}/applications`))
+  const docs = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   }))
+  // Sort by date_submitted descending, then by creation order
+  return docs.sort((a, b) => {
+    const aDate = a.date_submitted ? new Date(a.date_submitted) : new Date(0)
+    const bDate = b.date_submitted ? new Date(b.date_submitted) : new Date(0)
+    return bDate - aDate
+  })
 }
 
 export const updateApplication = async (userId, appId, data) => {
@@ -73,18 +76,10 @@ export const getInterviewPrep = async (userId, appId) => {
 
 export const saveInterviewPrep = async (userId, appId, data) => {
   const ref = doc(db, `users/${userId}/interviewPrep/${appId}`)
-  await updateDoc(ref, {
+  await setDoc(ref, {
     ...data,
     updated_at: new Date(),
-  }).catch(async () => {
-    // Create if doesn't exist
-    await addDoc(collection(db, `users/${userId}/interviewPrep`), {
-      application_id: appId,
-      ...data,
-      created_at: new Date(),
-      updated_at: new Date(),
-    })
-  })
+  }, { merge: true })
 }
 
 export const deleteInterviewPrep = async (userId, appId) => {
