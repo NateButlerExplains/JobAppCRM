@@ -1730,6 +1730,18 @@ def get_application_prep(app_id):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/applications/<int:app_id>/prep", methods=["DELETE"])
+def delete_application_prep(app_id):
+    """Delete interview prep for an application."""
+    try:
+        InterviewPrep.delete_by_application(db, app_id)
+        return jsonify({"message": "Interview prep deleted"}), 200
+
+    except Exception as e:
+        logger.error(f"Error deleting prep: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/prep/history", methods=["GET"])
 def get_prep_history():
     """Get all interview prep sessions with application info."""

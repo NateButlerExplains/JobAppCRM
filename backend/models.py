@@ -785,6 +785,13 @@ class InterviewPrep:
         return True
 
     @staticmethod
+    def delete_by_application(db: Database, app_id: int) -> bool:
+        """Delete interview prep record for an application."""
+        db.execute("DELETE FROM interview_prep WHERE application_id = ?", (app_id,))
+        db.commit()
+        return True
+
+    @staticmethod
     def get_all_with_applications(db: Database) -> List[Dict[str, Any]]:
         """Get all interview prep sessions joined with application info."""
         cursor = db.execute(

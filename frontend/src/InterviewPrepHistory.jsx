@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getInterviewPrepHistory } from './api'
+import { getInterviewPrepHistory, deleteInterviewPrep } from './api'
+import { Trash2 } from 'lucide-react'
 
 export function InterviewPrepHistory({ onSelectApp }) {
   const [sessions, setSessions] = useState([])
@@ -30,6 +31,21 @@ export function InterviewPrepHistory({ onSelectApp }) {
         company_name: session.company_name,
         job_title: session.job_title,
       })
+    }
+  }
+
+  const handleDelete = async (e, session) => {
+    e.stopPropagation()
+    if (window.confirm(`Delete interview prep for ${session.company_name}? This cannot be undone.`)) {
+      setLoading(true)
+      try {
+        await deleteInterviewPrep(session.application_id)
+        setSessions(sessions.filter(s => s.application_id !== session.application_id))
+      } catch (err) {
+        setError(`Failed to delete: ${err.message}`)
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
@@ -82,8 +98,8 @@ export function InterviewPrepHistory({ onSelectApp }) {
               className="p-4 bg-slate-800 border border-slate-700 hover:border-blue-500 cursor-pointer transition-all duration-200 hover:bg-slate-750 flex-shrink-0"
               style={{ borderRadius: '8px', width: '280px' }}
             >
-              <div className="space-y-3">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
                   <h3 className="font-bold text-base text-white">
                     {session.company_name}
                   </h3>
@@ -91,20 +107,27 @@ export function InterviewPrepHistory({ onSelectApp }) {
                     {session.job_title}
                   </p>
                 </div>
+                <button
+                  onClick={(e) => handleDelete(e, session)}
+                  className="p-1 text-slate-500 hover:text-red-400 transition-colors flex-shrink-0"
+                  title="Delete interview prep"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
 
-                {/* Status badges */}
-                <div className="flex gap-2 flex-wrap">
-                  {hasResearch(session) && (
-                    <span className="inline-block px-2 py-1 bg-green-600/40 text-green-300 text-xs font-bold" style={{ borderRadius: '4px' }}>
-                      ✓ Research
-                    </span>
-                  )}
-                  {hasQuestions(session) && (
-                    <span className="inline-block px-2 py-1 bg-blue-600/40 text-blue-300 text-xs font-bold" style={{ borderRadius: '4px' }}>
-                      ✓ Questions
-                    </span>
-                  )}
-                </div>
+              {/* Status badges */}
+              <div className="flex gap-2 flex-wrap">
+                {hasResearch(session) && (
+                  <span className="inline-block px-2 py-1 bg-green-600/40 text-green-300 text-xs font-bold" style={{ borderRadius: '4px' }}>
+                    ✓ Research
+                  </span>
+                )}
+                {hasQuestions(session) && (
+                  <span className="inline-block px-2 py-1 bg-blue-600/40 text-blue-300 text-xs font-bold" style={{ borderRadius: '4px' }}>
+                    ✓ Questions
+                  </span>
+                )}
               </div>
             </div>
           ))}

@@ -34,6 +34,7 @@ export const updateStageSuggestion = (id, data) => api.patch(`/stage-suggestions
 // Interview Prep
 export const getInterviewPrepHistory = () => api.get('/prep/history')
 export const getInterviewPrep = (appId) => api.get(`/applications/${appId}/prep`)
+export const deleteInterviewPrep = (appId) => api.delete(`/applications/${appId}/prep`)
 export const researchCompanyPrep = (appId, data = {}) => api.post(`/applications/${appId}/prep/research`, data)
 export const generateInterviewQuestions = (appId) => api.post(`/applications/${appId}/prep/generate`)
 export const uploadMarkdownResearch = (appId, parsedResearch) => api.post(`/applications/${appId}/prep/research-markdown`, {
