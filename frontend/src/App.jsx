@@ -103,27 +103,10 @@ function App() {
             {/* Logo - Left (absolute) */}
             <button
               onClick={() => setCurrentPage('dashboard')}
-              className="absolute left-0 flex items-center gap-2 text-2xl font-black uppercase tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
+              className="absolute left-0 text-3xl font-black uppercase tracking-tight hover:opacity-80 transition-opacity cursor-pointer"
               style={{ letterSpacing: '2px' }}
             >
-              <svg width="32" height="32" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                <rect width="64" height="64" fill="#1e293b" rx="8"/>
-                <defs>
-                  <linearGradient id="pipeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" style={{stopColor:'#3b82f6',stopOpacity:1}} />
-                    <stop offset="100%" style={{stopColor:'#06b6d4',stopOpacity:1}} />
-                  </linearGradient>
-                </defs>
-                <rect x="8" y="26" width="12" height="12" fill="url(#pipeGradient)" rx="2"/>
-                <rect x="22" y="26" width="12" height="12" fill="url(#pipeGradient)" rx="2"/>
-                <rect x="36" y="26" width="12" height="12" fill="url(#pipeGradient)" rx="2"/>
-                <rect x="50" y="26" width="4" height="12" fill="url(#pipeGradient)" rx="1"/>
-                <line x1="20" y1="32" x2="22" y2="32" stroke="url(#pipeGradient)" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="34" y1="32" x2="36" y2="32" stroke="url(#pipeGradient)" strokeWidth="2" strokeLinecap="round"/>
-                <line x1="48" y1="32" x2="50" y2="32" stroke="url(#pipeGradient)" strokeWidth="2" strokeLinecap="round"/>
-                <polygon points="56,32 52,28 52,36" fill="#06b6d4"/>
-              </svg>
-              <span style={{ color: 'white' }}>PIPELINE</span>
+              <span style={{ color: '#3b82f6' }}>→</span><span style={{ color: 'white' }}>PIPELINE</span>
             </button>
 
             {/* Navigation - Center */}
