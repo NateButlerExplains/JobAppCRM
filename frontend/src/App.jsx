@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { Login } from './Login'
-import { getApplications, getStats, getStageSuggestions } from './api'
 import { KanbanBoard } from './KanbanBoard'
 import { CardDetail } from './CardDetail'
 import { NewApplicationForm } from './NewApplicationForm'
@@ -13,40 +12,13 @@ import './App.css'
 function App() {
   const { user, loading: authLoading, logout } = useAuth()
   const [applications, setApplications] = useState([])
-  const [stats, setStats] = useState({})
-  const [suggestions, setSuggestions] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedApp, setSelectedApp] = useState(null)
   const [showCardDetail, setShowCardDetail] = useState(false)
   const [showNewAppForm, setShowNewAppForm] = useState(false)
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [interviewPrepApp, setInterviewPrepApp] = useState(null)
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [appsRes, statsRes, suggestionsRes] = await Promise.all([
-        getApplications(),
-        getStats(),
-        getStageSuggestions(),
-      ])
-
-      setApplications(appsRes.data)
-      setStats(statsRes.data)
-      setSuggestions(suggestionsRes.data)
-    } catch (err) {
-      setError(err.message)
-      console.error('Error loading data:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleCardClick = (app) => {
     setSelectedApp(app)
@@ -55,12 +27,6 @@ function App() {
 
   const handleApplicationsChange = (updatedApps) => {
     setApplications(updatedApps)
-    // Recalculate stats after changes
-    const newStats = {}
-    updatedApps.forEach(app => {
-      newStats[app.status] = (newStats[app.status] || 0) + 1
-    })
-    setStats(newStats)
   }
 
   const handleNavToInterview = (app) => {
@@ -82,17 +48,6 @@ function App() {
 
   if (!user) {
     return <Login />
-  }
-
-  if (loading && currentPage === 'dashboard') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-slate-400">Loading applications...</p>
-        </div>
-      </div>
-    )
   }
 
   if (error && currentPage === 'dashboard') {
@@ -206,28 +161,19 @@ function App() {
             </>
           )}
           {currentPage === 'dashboard' && (
-            <>
-              {/* Kanban Board */}
-              <div className="mb-8">
-                <KanbanBoard
-                  applications={applications}
-                  suggestions={suggestions}
-                  onCardClick={handleCardClick}
-                  onRefresh={loadData}
-                  onNavToInterview={handleNavToInterview}
-                />
+            <div className="space-y-8 max-w-4xl">
+              <div>
+                <h2 className="text-3xl font-black uppercase text-white mb-2" style={{ letterSpacing: '1px' }}>
+                  Dashboard
+                </h2>
+                <p className="text-slate-400 text-sm">Signed in as {user?.email}</p>
               </div>
-
-              {/* Suggestions */}
-              {suggestions.length > 0 && (
-                <div className="p-8 bg-slate-800/50 border border-slate-700">
-                  <h2 className="font-bold text-white mb-4 uppercase tracking-wide">Stage Suggestions ({suggestions.length})</h2>
-                  <div className="text-slate-400">
-                    <p>Pending suggestions component</p>
-                  </div>
-                </div>
-              )}
-            </>
+              <div className="bg-slate-800/50 border border-slate-700 p-8 text-center rounded-lg space-y-4">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-4"></div>
+                <p className="text-slate-400 text-lg">Building Firestore integration...</p>
+                <p className="text-slate-500 text-sm">Coming soon: Kanban board with drag-and-drop, interview prep, and multi-user support</p>
+              </div>
+            </div>
           )}
         </div>
       </main>

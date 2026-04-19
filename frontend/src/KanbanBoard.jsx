@@ -19,7 +19,6 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { ApplicationCard } from './ApplicationCard'
 import { InterviewPrepModal } from './InterviewPrepModal'
-import { updateApplication, deleteApplication, reorderApplications } from './api'
 
 const COLUMNS = [
   { id: 'Submitted', label: 'Submitted' },
